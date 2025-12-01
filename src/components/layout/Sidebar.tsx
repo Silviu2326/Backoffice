@@ -54,8 +54,6 @@ const navItems = [
   { name: 'Eventos', path: '/admin/events', icon: Calendar },
   { name: 'Gamificación', path: '/admin/gamification', icon: Trophy },
   { name: 'Productos Destacados', path: '/admin/marketing/featured', icon: Star },
-  { name: 'Moderación', path: '/admin/moderation', icon: ShieldAlert },
-  { name: 'Configuración', path: '/admin/settings', icon: Settings },
 ];
 
 interface SidebarProps {
