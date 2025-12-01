@@ -53,8 +53,6 @@ const navItems = [
   { name: 'Personajes', path: '/admin/characters', icon: Smile },
   { name: 'Eventos', path: '/admin/events', icon: Calendar },
   { name: 'Gamificación', path: '/admin/gamification', icon: Trophy },
-  { name: 'Quizzes', path: '/admin/gamification/quiz', icon: HelpCircle },
-  { name: 'Marketing Hub', path: '/admin/marketing/campaigns', icon: Megaphone },
   { name: 'Productos Destacados', path: '/admin/marketing/featured', icon: Star },
   { name: 'Moderación', path: '/admin/moderation', icon: ShieldAlert },
   { name: 'Configuración', path: '/admin/settings', icon: Settings },
