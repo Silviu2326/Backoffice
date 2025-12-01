@@ -1,32 +1,54 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import Button from '../ui/Button';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../ui/Modal';
 import { Input } from '../ui/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../ui/table/Table';
-import { Plus, Minus, History } from 'lucide-react';
+import { Plus, History, Loader2 } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { 
+  getLoyaltyHistory, 
+  getCustomerPointsBalance, 
+  addLoyaltyTransaction, 
+  LoyaltyTransaction 
+} from '../../features/crm/api/loyaltyService';
+import { formatDate } from '../../utils/formatters';
 
-interface LoyaltyTransaction {
-  id: string;
-  date: string;
-  concept: string;
-  points: number;
+interface LoyaltyManagerProps {
+  customerId: string;
 }
 
-const LoyaltyManager: React.FC = () => {
-  const [pointsBalance, setPointsBalance] = useState(2500);
-  const [history, setHistory] = useState<LoyaltyTransaction[]>([
-    { id: '1', date: '2023-10-25', concept: 'Compra en tienda', points: 150 },
-    { id: '2', date: '2023-10-20', concept: 'Canje de premio', points: -500 },
-    { id: '3', date: '2023-10-15', concept: 'Bono de cumpleaños', points: 1000 },
-    { id: '4', date: '2023-10-10', concept: 'Compra online', points: 350 },
-  ]);
-
+const LoyaltyManager: React.FC<LoyaltyManagerProps> = ({ customerId }) => {
+  const [pointsBalance, setPointsBalance] = useState(0);
+  const [history, setHistory] = useState<LoyaltyTransaction[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [adjustmentPoints, setAdjustmentPoints] = useState('');
   const [adjustmentReason, setAdjustmentReason] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    loadLoyaltyData();
+  }, [customerId]);
+
+  const loadLoyaltyData = async () => {
+    if (!customerId) return;
+    try {
+      setIsLoading(true);
+      const [balance, transactions] = await Promise.all([
+        getCustomerPointsBalance(customerId),
+        getLoyaltyHistory(customerId)
+      ]);
+      setPointsBalance(balance);
+      setHistory(transactions);
+    } catch (err) {
+      console.error('Error loading loyalty data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleOpenModal = () => {
     setIsModalOpen(true);
@@ -39,7 +61,7 @@ const LoyaltyManager: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  const handleAdjustmentSubmit = () => {
+  const handleAdjustmentSubmit = async () => {
     if (!adjustmentPoints || isNaN(Number(adjustmentPoints))) {
       setError('Por favor ingrese una cantidad válida de puntos.');
       return;
@@ -49,17 +71,26 @@ const LoyaltyManager: React.FC = () => {
       return;
     }
 
-    const points = Number(adjustmentPoints);
-    const newTransaction: LoyaltyTransaction = {
-      id: Math.random().toString(36).substr(2, 9),
-      date: new Date().toISOString().split('T')[0],
-      concept: adjustmentReason,
-      points: points,
-    };
+    try {
+      setIsSubmitting(true);
+      const points = Number(adjustmentPoints);
+      
+      await addLoyaltyTransaction(
+        customerId,
+        points,
+        adjustmentReason,
+        'manual_adjustment'
+      );
 
-    setPointsBalance((prev) => prev + points);
-    setHistory((prev) => [newTransaction, ...prev]);
-    handleCloseModal();
+      // Reload data to reflect changes (including trigger updates)
+      await loadLoyaltyData();
+      handleCloseModal();
+    } catch (err: any) {
+      console.error('Error submitting adjustment:', err);
+      setError(err.message || 'Error al guardar el ajuste. Inténtalo de nuevo.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -74,42 +105,60 @@ const LoyaltyManager: React.FC = () => {
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="mb-6 flex flex-col items-center justify-center rounded-xl bg-white/5 p-6 border border-white/10">
-          <span className="text-sm text-text-secondary uppercase tracking-wider font-medium">Saldo Actual</span>
-          <div className="mt-2 text-5xl font-display font-bold text-brand-orange">
-            {pointsBalance.toLocaleString()}
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
           </div>
-          <span className="text-sm text-text-muted mt-1">Puntos acumulados</span>
-        </div>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-col items-center justify-center rounded-xl bg-white/5 p-6 border border-white/10">
+              <span className="text-sm text-text-secondary uppercase tracking-wider font-medium">Saldo Actual</span>
+              <div className="mt-2 text-5xl font-display font-bold text-brand-orange">
+                {pointsBalance.toLocaleString()}
+              </div>
+              <span className="text-sm text-text-muted mt-1">Puntos acumulados</span>
+            </div>
 
-        <div className="rounded-lg border border-white/10 overflow-hidden">
-            <Table>
-                <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[120px]">Fecha</TableHead>
-                        <TableHead>Concepto</TableHead>
-                        <TableHead className="text-right">Puntos</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {history.map((item) => (
-                        <TableRow key={item.id} className={cn(
-                            "transition-colors hover:bg-white/5",
-                            item.points > 0 ? "hover:bg-status-success/5" : "hover:bg-status-error/5"
-                        )}>
-                            <TableCell className="font-medium text-text-secondary">{item.date}</TableCell>
-                            <TableCell>{item.concept}</TableCell>
-                            <TableCell className={cn(
-                                "text-right font-bold",
-                                item.points > 0 ? "text-status-success" : "text-status-error"
-                            )}>
-                                {item.points > 0 ? '+' : ''}{item.points}
-                            </TableCell>
+            <div className="rounded-lg border border-white/10 overflow-hidden max-h-[300px] overflow-y-auto">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="hover:bg-transparent">
+                            <TableHead className="w-[120px]">Fecha</TableHead>
+                            <TableHead>Concepto</TableHead>
+                            <TableHead className="text-right">Puntos</TableHead>
                         </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </div>
+                    </TableHeader>
+                    <TableBody>
+                        {history.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-center text-text-secondary py-4">
+                              No hay historial de puntos
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          history.map((item) => (
+                              <TableRow key={item.id} className={cn(
+                                  "transition-colors hover:bg-white/5",
+                                  item.points > 0 ? "hover:bg-status-success/5" : "hover:bg-status-error/5"
+                              )}>
+                                  <TableCell className="font-medium text-text-secondary">
+                                    {formatDate(new Date(item.createdAt), 'short')}
+                                  </TableCell>
+                                  <TableCell>{item.concept}</TableCell>
+                                  <TableCell className={cn(
+                                      "text-right font-bold",
+                                      item.points > 0 ? "text-status-success" : "text-status-error"
+                                  )}>
+                                      {item.points > 0 ? '+' : ''}{item.points}
+                                  </TableCell>
+                              </TableRow>
+                          ))
+                        )}
+                    </TableBody>
+                </Table>
+            </div>
+          </>
+        )}
       </CardContent>
 
       <Modal isOpen={isModalOpen} onClose={handleCloseModal}>
@@ -135,8 +184,17 @@ const LoyaltyManager: React.FC = () => {
             </div>
         </ModalBody>
         <ModalFooter>
-            <Button variant="ghost" onClick={handleCloseModal}>Cancelar</Button>
-            <Button onClick={handleAdjustmentSubmit}>Guardar Ajuste</Button>
+            <Button variant="ghost" onClick={handleCloseModal} disabled={isSubmitting}>Cancelar</Button>
+            <Button onClick={handleAdjustmentSubmit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                'Guardar Ajuste'
+              )}
+            </Button>
         </ModalFooter>
       </Modal>
     </Card>

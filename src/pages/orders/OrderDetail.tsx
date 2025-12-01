@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Printer, 
   XCircle, 
@@ -9,13 +10,15 @@ import {
   Phone,
   ExternalLink,
   CheckCircle,
-  Package
+  Package,
+  Loader2,
+  ArrowLeft
 } from 'lucide-react';
 import { Order, OrderStatus } from '../../types/core';
-import { MOCK_ORDERS, MOCK_CUSTOMERS } from '../../data/mockFactory';
+import { getOrderById, updateOrderStatus } from '../../features/orders/api/orderService';
+import Button from '../../components/ui/Button';
 import { OrderPipeline } from '../../components/orders/OrderPipeline';
 import OrderItemsTable from '../../components/orders/OrderItemsTable';
-import Button from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
@@ -30,9 +33,8 @@ interface CustomerMiniCardProps {
 }
 
 const CustomerMiniCard = ({ customerId }: CustomerMiniCardProps) => {
-  const customer = MOCK_CUSTOMERS.find(c => c.id === customerId);
-
-  if (!customer) return <Card>Cliente no encontrado</Card>;
+  // In a real app, you would fetch customer data from Supabase Auth or a customers table
+  // For now, we'll just show the customer ID
 
   return (
     <Card className="p-6 space-y-6">
@@ -45,30 +47,22 @@ const CustomerMiniCard = ({ customerId }: CustomerMiniCardProps) => {
       
       <div className="flex items-center gap-4">
         <Avatar 
-            src={customer.avatarUrl} 
-            alt={customer.fullName} 
+            src={undefined} 
+            alt="Cliente" 
             size="lg" 
-            fallback={customer.fullName.substring(0, 2)} 
+            fallback="C" 
         />
         <div>
-          <p className="font-medium text-white">{customer.fullName}</p>
-          <p className="text-sm text-text-secondary">{customer.email}</p>
+          <p className="font-medium text-white">Cliente</p>
+          <p className="text-sm text-text-secondary">ID: {customerId.substring(0, 8)}...</p>
         </div>
       </div>
 
       <div className="space-y-3 pt-4 border-t border-white/10">
         <div className="flex items-center gap-3 text-sm text-text-secondary">
-            <Badge variant={customer.segment === 'VIP' ? 'brand' : 'default'}>
-                {customer.segment}
+            <Badge variant="default">
+                Cliente
             </Badge>
-            <span className="text-xs">
-                {customer.pointsBalance} Puntos
-            </span>
-        </div>
-        
-        <div className="flex items-center gap-3 text-sm text-text-secondary">
-          <Phone size={14} />
-          <span>+1 234 567 890</span> {/* Mock phone */}
         </div>
       </div>
       
@@ -179,17 +173,61 @@ const OrderHistory = ({ order }: { order: Order }) => {
 // --- Main Page Component ---
 
 const OrderDetail = () => {
+  const { id } = useParams();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate fetching the order by ID. We'll just grab the first one for the demo.
-    const mockOrder = MOCK_ORDERS[0];
-    if (mockOrder) {
-        setOrder(mockOrder);
-    }
-  }, []);
+    const loadOrder = async () => {
+      if (!id) {
+        setError('ID de pedido no proporcionado');
+        setIsLoading(false);
+        return;
+      }
 
-  if (!order) return <div className="p-10 text-center text-white">Cargando pedido...</div>;
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedOrder = await getOrderById(id);
+        
+        if (!fetchedOrder) {
+          setError('Pedido no encontrado');
+          return;
+        }
+
+        setOrder(fetchedOrder);
+      } catch (err) {
+        console.error('Error loading order:', err);
+        setError('Error al cargar el pedido');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadOrder();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="p-10 flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return (
+      <div className="p-10 text-center">
+        <p className="text-red-400 mb-4">{error || 'Pedido no encontrado'}</p>
+        <Button onClick={() => navigate('/admin/orders')} variant="outline">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Volver a Pedidos
+        </Button>
+      </div>
+    );
+  }
 
   // Calculate totals for the table
   const subtotal = order.totalAmount * 0.85; // Mock logic

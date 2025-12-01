@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
-import { Eye, Plus } from 'lucide-react';
-import { MOCK_ORDERS, MOCK_CUSTOMERS } from '../../data/mockFactory';
-import { Order, OrderStatus } from '../../types/core';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Eye, Plus, Loader2 } from 'lucide-react';
+import { Order, OrderStatus, Customer } from '../../types/core';
+import { getAllOrders, createOrder } from '../../features/orders/api/orderService';
+import { getCustomers } from '../../features/crm/api/customerService';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -18,12 +19,78 @@ import { Select } from '../../components/ui/Select';
 import OrderItemsTable from '../../components/orders/OrderItemsTable';
 
 const OrderList = () => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus>(OrderStatus.PENDING_PAYMENT);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('todos');
   const [page, setPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const pageSize = 10;
+
+  const [estimatedTotal, setEstimatedTotal] = useState('');
+
+  // Load orders and customers from Supabase
+  useEffect(() => {
+    loadOrders();
+    loadCustomers();
+  }, []);
+
+  const loadOrders = async () => {
+    try {
+      setIsLoading(true);
+      const allOrders = await getAllOrders();
+      setOrders(allOrders);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadCustomers = async () => {
+    try {
+      const allCustomers = await getCustomers();
+      setCustomers(allCustomers);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    }
+  };
+
+  const handleCreateOrder = async () => {
+    if (!selectedCustomerId) {
+      alert('Por favor selecciona un cliente');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const customer = customers.find(c => c.id === selectedCustomerId);
+      const newOrder = await createOrder({
+        orderNumber: `ORD-${Date.now().toString().slice(-6)}`,
+        customerId: selectedCustomerId,
+        customerEmail: customer?.email,
+        totalAmount: parseFloat(estimatedTotal) || 0,
+        status: selectedStatus,
+        items: [],
+        shippingAddress: { street: '', city: '', state: '', zipCode: '', country: '' },
+        billingAddress: { street: '', city: '', state: '', zipCode: '', country: '' },
+      });
+      setOrders([newOrder, ...orders]);
+      setIsCreateModalOpen(false);
+      setSelectedCustomerId('');
+      setEstimatedTotal('');
+      alert('Pedido creado correctamente');
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      alert('Error al crear el pedido: ' + (error.message || JSON.stringify(error)));
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
@@ -49,21 +116,21 @@ const OrderList = () => {
   };
 
   const getCustomerName = (customerId: string) => {
-    const customer = MOCK_CUSTOMERS.find((c) => c.id === customerId);
-    return customer ? customer.fullName : 'Cliente Desconocido';
+    const customer = customers.find(c => c.id === customerId);
+    return customer ? customer.fullName : `Cliente ${customerId.substring(0, 8)}...`;
   };
 
   const filteredOrders = useMemo(() => {
-    let filtered = MOCK_ORDERS;
+    let filtered = orders;
 
     switch (activeTab) {
       case 'pendientes':
-        filtered = MOCK_ORDERS.filter((order) =>
+        filtered = orders.filter((order) =>
           [OrderStatus.PENDING_PAYMENT, OrderStatus.PAID].includes(order.status)
         );
         break;
       case 'proceso':
-        filtered = MOCK_ORDERS.filter((order) =>
+        filtered = orders.filter((order) =>
           [
             OrderStatus.PREPARING,
             OrderStatus.READY_TO_SHIP,
@@ -72,12 +139,12 @@ const OrderList = () => {
         );
         break;
       case 'completados':
-        filtered = MOCK_ORDERS.filter((order) =>
+        filtered = orders.filter((order) =>
           order.status === OrderStatus.DELIVERED
         );
         break;
       case 'incidencias':
-        filtered = MOCK_ORDERS.filter((order) =>
+        filtered = orders.filter((order) =>
           [OrderStatus.RETURNED, OrderStatus.CANCELLED].includes(order.status)
         );
         break;
@@ -87,7 +154,7 @@ const OrderList = () => {
     
     // Sort by date descending
     return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }, [activeTab]);
+  }, [activeTab, orders]);
 
   const paginatedOrders = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -177,16 +244,22 @@ const OrderList = () => {
         </TabsList>
 
         <div className="mt-6">
-          <DataTable
-            data={paginatedOrders}
-            columns={columns}
-            pagination={{
-              page,
-              pageSize,
-              total: filteredOrders.length,
-              onPageChange: setPage,
-            }}
-          />
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+            </div>
+          ) : (
+            <DataTable
+              data={paginatedOrders}
+              columns={columns}
+              pagination={{
+                page,
+                pageSize,
+                total: filteredOrders.length,
+                onPageChange: setPage,
+              }}
+            />
+          )}
         </div>
       </Tabs>
 
@@ -195,24 +268,29 @@ const OrderList = () => {
         <ModalBody className="space-y-4">
           <Select
             label="Cliente"
-            options={MOCK_CUSTOMERS.map(c => ({ value: c.id, label: c.fullName }))}
-            onChange={() => {}}
-            placeholder="Seleccionar cliente"
+            options={customers.map(c => ({ value: c.id, label: c.fullName }))}
+            value={selectedCustomerId}
+            onChange={(val) => setSelectedCustomerId(val)}
+            placeholder="Seleccionar cliente..."
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Total estimado"
               placeholder="0.00"
               type="number"
+              value={estimatedTotal}
+              onChange={(e) => setEstimatedTotal(e.target.value)}
             />
             <Select
               label="Estado inicial"
               options={[
-                { value: OrderStatus.PENDING_PAYMENT, label: 'Pendiente Pago' },
-                { value: OrderStatus.PAID, label: 'Pagado' },
+                { value: OrderStatus.PENDING_PAYMENT, label: 'Pendientes' },
+                { value: OrderStatus.PREPARING, label: 'En Proceso' },
+                { value: OrderStatus.DELIVERED, label: 'Completados' },
+                { value: OrderStatus.CANCELLED, label: 'Incidencias' },
               ]}
-              onChange={() => {}}
-              value={OrderStatus.PENDING_PAYMENT}
+              onChange={(val) => setSelectedStatus(val as OrderStatus)}
+              value={selectedStatus}
             />
           </div>
         </ModalBody>
@@ -220,30 +298,29 @@ const OrderList = () => {
           <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
             Cancelar
           </Button>
-          <Button onClick={() => setIsCreateModalOpen(false)}>
+          <Button onClick={handleCreateOrder}>
             Crear Pedido
           </Button>
         </ModalFooter>
       </Modal>
 
       {selectedOrder && (
-        <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)}>
-          <div className="min-w-[800px] max-w-[90vw]">
-            <ModalHeader className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span>Pedido {selectedOrder.orderNumber}</span>
-                {getStatusBadge(selectedOrder.status)}
-              </div>
-              <div className="text-sm font-normal text-text-secondary">
-                {formatDate(selectedOrder.createdAt, 'full')}
-              </div>
-            </ModalHeader>
-            <ModalBody className="space-y-6">
-              <div className="grid grid-cols-3 gap-6 rounded-lg bg-white/5 p-4">
+        <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} size="xl">
+          <ModalHeader className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="flex items-center gap-4">
+              <span className="text-xl font-bold">Pedido {selectedOrder.orderNumber}</span>
+              {getStatusBadge(selectedOrder.status)}
+            </div>
+            <div className="text-sm font-normal text-text-secondary">
+              {formatDate(selectedOrder.createdAt, 'full')}
+            </div>
+          </ModalHeader>
+          <ModalBody className="space-y-6 flex-1 overflow-y-auto pr-2">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 rounded-lg bg-white/5 p-4 border border-white/10">
                 <div>
                   <h4 className="mb-2 text-sm font-medium text-text-secondary">Cliente</h4>
                   <p className="font-medium text-white">{getCustomerName(selectedOrder.customerId)}</p>
-                  <p className="text-sm text-text-secondary">{MOCK_CUSTOMERS.find(c => c.id === selectedOrder.customerId)?.email}</p>
+                  <p className="text-sm text-text-secondary">ID: {selectedOrder.customerId}</p>
                 </div>
                 <div>
                   <h4 className="mb-2 text-sm font-medium text-text-secondary">Dirección de Envío</h4>
@@ -277,12 +354,11 @@ const OrderList = () => {
                 />
               </div>
             </ModalBody>
-            <ModalFooter>
+            <ModalFooter className="border-t border-white/10 pt-4">
               <Button onClick={() => setIsViewModalOpen(false)}>
                 Cerrar
               </Button>
             </ModalFooter>
-          </div>
         </Modal>
       )}
     </div>

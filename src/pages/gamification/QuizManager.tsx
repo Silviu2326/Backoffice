@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -18,132 +18,15 @@ import {
   AlertCircle,
   GripVertical,
   Copy,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
-import { MOCK_PRODUCTS } from '../../data/mockFactory';
-
-// --- Types ---
-interface QuizOption {
-  id: string;
-  text: string;
-  value: string; // Valor que se suma al contador (ej: 'ipa', 'wheat', 'porter', 'ale')
-  points?: number; // Puntos adicionales para este valor
-}
-
-interface QuizQuestion {
-  id: string;
-  question: string;
-  order: number;
-  options: QuizOption[];
-  isActive: boolean;
-}
-
-interface RecommendationRule {
-  id: string;
-  name: string;
-  conditions: {
-    value: string; // Valor del quiz (ej: 'ipa')
-    minCount?: number; // Mínimo de respuestas con este valor
-    maxCount?: number; // Máximo de respuestas con este valor
-  }[];
-  productId: string; // ID del producto recomendado
-  productName: string; // Nombre del producto (para mostrar)
-  priority: number; // Prioridad (mayor = más importante)
-  description?: string; // Descripción de la recomendación
-}
-
-interface Quiz {
-  id: string;
-  name: string;
-  description: string;
-  isActive: boolean;
-  questions: QuizQuestion[];
-  rules: RecommendationRule[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-// --- Mock Data ---
-const MOCK_QUIZZES: Quiz[] = [
-  {
-    id: '1',
-    name: 'Quiz de Recomendación de Cerveza',
-    description: 'Quiz principal para recomendar cervezas según preferencias del usuario',
-    isActive: true,
-    questions: [
-      {
-        id: 'q1',
-        question: '¿Qué tipo de sabor prefieres en una cerveza?',
-        order: 1,
-        isActive: true,
-        options: [
-          { id: 'opt1', text: 'Suave y refrescante', value: 'wheat' },
-          { id: 'opt2', text: 'Fuerte y lupulado', value: 'ipa' },
-          { id: 'opt3', text: 'Dulce y maltoso', value: 'ale' },
-          { id: 'opt4', text: 'Oscuro y complejo', value: 'porter' },
-        ],
-      },
-      {
-        id: 'q2',
-        question: '¿Cuándo prefieres beber cerveza?',
-        order: 2,
-        isActive: true,
-        options: [
-          { id: 'opt5', text: 'En la playa o piscina', value: 'wheat' },
-          { id: 'opt6', text: 'Después del trabajo', value: 'ipa' },
-          { id: 'opt7', text: 'Con amigos en casa', value: 'ale' },
-          { id: 'opt8', text: 'En una cena especial', value: 'porter' },
-        ],
-      },
-      {
-        id: 'q3',
-        question: '¿Qué nivel de alcohol prefieres?',
-        order: 3,
-        isActive: true,
-        options: [
-          { id: 'opt9', text: 'Ligero (3-5%)', value: 'wheat' },
-          { id: 'opt10', text: 'Medio (5-6%)', value: 'ale' },
-          { id: 'opt11', text: 'Alto (6-7%)', value: 'ipa' },
-          { id: 'opt12', text: 'Muy alto (7%+)', value: 'porter' },
-        ],
-      },
-    ],
-    rules: [
-      {
-        id: 'r1',
-        name: 'Recomendación IPA',
-        conditions: [{ value: 'ipa', minCount: 2 }],
-        productId: 'prod-1',
-        productName: 'Sifrina Sin Gluten IPA',
-        priority: 10,
-        description: 'Para usuarios que prefieren sabores intensos y lupulados',
-      },
-      {
-        id: 'r2',
-        name: 'Recomendación Wheat',
-        conditions: [{ value: 'wheat', minCount: 2 }],
-        productId: 'prod-2',
-        productName: 'Morena Artesanal',
-        priority: 10,
-        description: 'Para usuarios que buscan sabores suaves y refrescantes',
-      },
-      {
-        id: 'r3',
-        name: 'Recomendación Porter',
-        conditions: [{ value: 'porter', minCount: 2 }],
-        productId: 'prod-3',
-        productName: 'Candela Chili Porter',
-        priority: 10,
-        description: 'Para usuarios con paladar sofisticado',
-      },
-    ],
-    createdAt: '2024-01-15',
-    updatedAt: '2024-12-01',
-  },
-];
+import { getAllQuizzes, createQuiz, updateQuiz, deleteQuiz } from '../../features/gamification/api/quizService';
+import { getProducts } from '../../features/products/api/productService';
+import type { Quiz, QuizQuestion, QuizOption, RecommendationRule } from '../../features/gamification/api/quizService';
 
 const QuizManager: React.FC = () => {
-  const [quizzes, setQuizzes] = useState<Quiz[]>(MOCK_QUIZZES);
+  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isQuestionModalOpen, setIsQuestionModalOpen] = useState(false);
@@ -151,15 +34,44 @@ const QuizManager: React.FC = () => {
   const [editingQuestion, setEditingQuestion] = useState<QuizQuestion | null>(null);
   const [editingRule, setEditingRule] = useState<RecommendationRule | null>(null);
   const [activeTab, setActiveTab] = useState<'questions' | 'rules'>('questions');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [availableProducts, setAvailableProducts] = useState<{ value: string; label: string }[]>([]);
 
-  const availableProducts = MOCK_PRODUCTS.map(p => ({
-    value: p.id,
-    label: p.name,
-  }));
+  // Cargar quizzes y productos desde Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Cargar quizzes
+        const quizzesData = await getAllQuizzes();
+        setQuizzes(quizzesData);
+
+        // Cargar productos para las reglas
+        const productsData = await getProducts({});
+        setAvailableProducts(
+          productsData.map(p => ({
+            value: p.id,
+            label: p.name,
+          }))
+        );
+      } catch (err) {
+        console.error('Error loading quizzes:', err);
+        setError('Error al cargar los quizzes. Por favor, intenta de nuevo.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const handleCreateQuiz = () => {
     const newQuiz: Quiz = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: '', // Se generará en el servidor
       name: 'Nuevo Quiz',
       description: '',
       isActive: false,
@@ -168,7 +80,6 @@ const QuizManager: React.FC = () => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    setQuizzes([...quizzes, newQuiz]);
     setSelectedQuiz(newQuiz);
     setIsEditModalOpen(true);
   };
@@ -178,15 +89,57 @@ const QuizManager: React.FC = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleSaveQuiz = () => {
+  const handleSaveQuiz = async () => {
     if (!selectedQuiz) return;
     
-    setQuizzes(prev => prev.map(q => 
-      q.id === selectedQuiz.id 
-        ? { ...selectedQuiz, updatedAt: new Date().toISOString() }
-        : q
-    ));
-    setIsEditModalOpen(false);
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      let savedQuiz: Quiz;
+      if (selectedQuiz.id && quizzes.some(q => q.id === selectedQuiz.id)) {
+        // Actualizar quiz existente
+        savedQuiz = await updateQuiz(selectedQuiz.id, selectedQuiz);
+      } else {
+        // Crear nuevo quiz
+        savedQuiz = await createQuiz(selectedQuiz);
+      }
+
+      // Actualizar lista de quizzes
+      setQuizzes(prev => {
+        const exists = prev.some(q => q.id === savedQuiz.id);
+        if (exists) {
+          return prev.map(q => q.id === savedQuiz.id ? savedQuiz : q);
+        } else {
+          return [...prev, savedQuiz];
+        }
+      });
+
+      setSelectedQuiz(savedQuiz);
+      setIsEditModalOpen(false);
+    } catch (err) {
+      console.error('Error saving quiz:', err);
+      setError('Error al guardar el quiz. Por favor, intenta de nuevo.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteQuiz = async (quizId: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este quiz?')) {
+      return;
+    }
+
+    try {
+      await deleteQuiz(quizId);
+      setQuizzes(prev => prev.filter(q => q.id !== quizId));
+      if (selectedQuiz?.id === quizId) {
+        setSelectedQuiz(null);
+      }
+    } catch (err) {
+      console.error('Error deleting quiz:', err);
+      setError('Error al eliminar el quiz. Por favor, intenta de nuevo.');
+    }
   };
 
   const handleAddQuestion = () => {
@@ -294,17 +247,20 @@ const QuizManager: React.FC = () => {
   const handleSaveRule = () => {
     if (!selectedQuiz || !editingRule) return;
     
-    const product = MOCK_PRODUCTS.find(p => p.id === editingRule.productId);
+    const product = availableProducts.find(p => p.value === editingRule.productId);
     
     const updatedRule: RecommendationRule = {
       ...editingRule,
-      productName: product?.name || '',
+      productName: product?.label || editingRule.productId,
     };
     
-    const updatedRules = editingRule.id.startsWith('r') && 
-      selectedQuiz.rules.some(r => r.id === editingRule.id)
-      ? selectedQuiz.rules.map(r => r.id === editingRule.id ? updatedRule : r)
-      : [...selectedQuiz.rules, updatedRule];
+    // Generar ID temporal si es nuevo
+    const ruleId = editingRule.id || `r${Date.now()}`;
+    const updatedRuleWithId = { ...updatedRule, id: ruleId };
+    
+    const updatedRules = selectedQuiz.rules.some(r => r.id === ruleId)
+      ? selectedQuiz.rules.map(r => r.id === ruleId ? updatedRuleWithId : r)
+      : [...selectedQuiz.rules, updatedRuleWithId];
     
     setSelectedQuiz({
       ...selectedQuiz,
@@ -353,6 +309,15 @@ const QuizManager: React.FC = () => {
     });
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
+        <span className="ml-3 text-text-secondary">Cargando quizzes...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -368,6 +333,12 @@ const QuizManager: React.FC = () => {
           Nuevo Quiz
         </Button>
       </div>
+
+      {error && (
+        <div className="bg-status-error/10 border border-status-error/20 rounded-lg p-4 text-status-error">
+          {error}
+        </div>
+      )}
 
       {/* Quizzes List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -402,18 +373,29 @@ const QuizManager: React.FC = () => {
                   <span className="text-text-secondary">Reglas:</span>
                   <span className="text-white font-medium">{quiz.rules.length}</span>
                 </div>
-                <div className="pt-2 border-t border-white/10">
+                <div className="pt-2 border-t border-white/10 flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full"
+                    className="flex-1"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleEditQuiz(quiz);
                     }}
                   >
                     <Edit2 className="w-4 h-4 mr-2" />
-                    Editar Quiz
+                    Editar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-red-400 hover:text-red-300 hover:border-red-400"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteQuiz(quiz.id);
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -445,9 +427,22 @@ const QuizManager: React.FC = () => {
                 >
                   {selectedQuiz.isActive ? 'Desactivar' : 'Activar'} Quiz
                 </Button>
-                <Button onClick={handleSaveQuiz} className="gap-2">
-                  <Save className="w-4 h-4" />
-                  Guardar Cambios
+                <Button 
+                  onClick={handleSaveQuiz} 
+                  className="gap-2"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Guardar Cambios
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -979,4 +974,11 @@ const QuizManager: React.FC = () => {
 };
 
 export default QuizManager;
+
+
+
+
+
+
+
 

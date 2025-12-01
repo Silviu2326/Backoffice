@@ -1,147 +1,393 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline'; // Assuming heroicons are available or will be installed
+import { Plus, Trash2, Save, X, Loader2, Filter, Search } from 'lucide-react';
+import { Achievement } from '../../types/core';
+import { 
+  getAllAchievements, 
+  createAchievement, 
+  updateAchievement, 
+  deleteAchievement,
+  getAchievementsByCategory 
+} from '../../features/gamification/api/achievementService';
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
 
-interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  condition: string;
-  locked: boolean;
-}
+const CATEGORIES = [
+  { value: 'cervezas', label: 'Cervezas' },
+  { value: 'eventos', label: 'Eventos' },
+  { value: 'beer-run', label: 'Beer Run' },
+  { value: 'personajes', label: 'Personajes' },
+  { value: 'social', label: 'Social' },
+];
 
-const mockBadges: Badge[] = [
-  { id: '1', name: 'Primer Pedido', description: 'Realiza tu primer pedido', icon: '🛒', condition: 'Pedidos > 0', locked: false },
-  { id: '2', name: 'Gran Comprador', description: 'Más de 10 pedidos', icon: '🏆', condition: 'Pedidos > 10', locked: true },
-  { id: '3', name: 'Gastador Elite', description: 'Gasto total > 500€', icon: '💰', condition: 'Gasto > 500', locked: false },
+const DIFFICULTIES = [
+  { value: 'fácil', label: 'Fácil' },
+  { value: 'medio', label: 'Medio' },
+  { value: 'difícil', label: 'Difícil' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'draft', label: 'Borrador' },
+  { value: 'published', label: 'Publicado' },
 ];
 
 const BadgeEditor: React.FC = () => {
-  const [badges, setBadges] = useState<Badge[]>(mockBadges);
-  const [editingBadge, setEditingBadge] = useState<Badge | null>(null);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingAchievement, setEditingAchievement] = useState<Achievement | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
-  const handleEdit = (badge: Badge) => {
-    setEditingBadge({ ...badge });
-  };
+  // Load achievements from Supabase
+  useEffect(() => {
+    loadAchievements();
+  }, []);
 
-  const handleSave = () => {
-    if (editingBadge) {
-      if (editingBadge.id) {
-        setBadges(badges.map((b) => (b.id === editingBadge.id ? editingBadge : b)));
-      } else {
-        setBadges([...badges, { ...editingBadge, id: String(Date.now()), locked: true }]);
-      }
-      setEditingBadge(null);
+  const loadAchievements = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const allAchievements = await getAllAchievements();
+      setAchievements(allAchievements);
+    } catch (err) {
+      console.error('Error loading achievements:', err);
+      setError('Error al cargar los logros');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = (id: string) => {
-    setBadges(badges.filter((b) => b.id !== id));
+  const handleCreateNew = () => {
+    setEditingAchievement({
+      id: '',
+      name: '',
+      description: '',
+      category: 'cervezas',
+      difficulty: 'fácil',
+      status: 'draft',
+      rewardPoints: 0,
+      displayOrder: achievements.length + 1,
+      progressPercentage: 0,
+      createdAt: new Date().toISOString(),
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (achievement: Achievement) => {
+    setEditingAchievement({ ...achievement });
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!editingAchievement || !editingAchievement.name) {
+      setError('El nombre es requerido');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setError(null);
+
+      if (editingAchievement.id) {
+        // Update existing
+        await updateAchievement(editingAchievement.id, editingAchievement);
+      } else {
+        // Create new
+        await createAchievement(editingAchievement as Omit<Achievement, 'id' | 'createdAt'>);
+      }
+
+      await loadAchievements();
+      setIsModalOpen(false);
+      setEditingAchievement(null);
+    } catch (err) {
+      console.error('Error saving achievement:', err);
+      setError('Error al guardar el logro');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar este logro?')) {
+      return;
+    }
+
+    try {
+      await deleteAchievement(id);
+      await loadAchievements();
+    } catch (err) {
+      console.error('Error deleting achievement:', err);
+      setError('Error al eliminar el logro');
+    }
   };
 
   const handleCancel = () => {
-    setEditingBadge(null);
+    setIsModalOpen(false);
+    setEditingAchievement(null);
+    setError(null);
   };
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">Editor de Medallas de Lealtad</h1>
+  const filteredAchievements = achievements.filter(achievement => {
+    const matchesSearch = achievement.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         achievement.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || achievement.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-      {/* Grid de medallas existentes */}
-      <Card className="mb-8">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-medium">Medallas Existentes</h2>
-          <Button onClick={() => setEditingBadge({ id: '', name: '', description: '', icon: '', condition: '', locked: true })}>
-            <PlusIcon className="h-5 w-5 mr-2" /> Nueva Medalla
-          </Button>
+  const getDifficultyColor = (difficulty?: string) => {
+    switch (difficulty) {
+      case 'fácil': return 'bg-green-500/20 text-green-400';
+      case 'medio': return 'bg-yellow-500/20 text-yellow-400';
+      case 'difícil': return 'bg-red-500/20 text-red-400';
+      default: return 'bg-gray-500/20 text-gray-400';
+    }
+  };
+
+  const getCategoryColor = (category?: string) => {
+    switch (category) {
+      case 'cervezas': return 'bg-blue-500/20 text-blue-400';
+      case 'eventos': return 'bg-purple-500/20 text-purple-400';
+      case 'beer-run': return 'bg-orange-500/20 text-orange-400';
+      case 'personajes': return 'bg-pink-500/20 text-pink-400';
+      case 'social': return 'bg-green-500/20 text-green-400';
+      default: return 'bg-gray-500/20 text-gray-400';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-[400px]">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Editor de Logros</h1>
+          <p className="text-gray-400 text-sm mt-1">Gestiona los logros y medallas del sistema de gamificación</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {badges.map((badge) => (
-            <Card key={badge.id} className="p-4 flex flex-col items-center text-center">
-              <span className={`text-5xl mb-2 ${badge.locked ? 'grayscale' : ''}`}>
-                {badge.icon}
-              </span>
-              <h3 className="text-lg font-semibold">{badge.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">{badge.description}</p>
-              <Badge variant={badge.locked ? 'warning' : 'default'}>
-                {badge.locked ? 'Bloqueada' : 'Desbloqueada'}
-              </Badge>
-              <Button variant="ghost" size="sm" onClick={() => handleEdit(badge)} className="mt-2">
-                Editar
-              </Button>
-              <Button variant="danger" size="sm" onClick={() => handleDelete(badge.id)} className="mt-2">
-                <TrashIcon className="h-4 w-4" />
-              </Button>
-            </Card>
-          ))}
+        <Button onClick={handleCreateNew} leftIcon={<Plus className="w-4 h-4" />}>
+          Nuevo Logro
+        </Button>
+      </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg">
+          {error}
         </div>
+      )}
+
+      {/* Filters */}
+      <Card className="bg-[#1E1E1E] border-white/10">
+        <CardContent className="p-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar logros..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-[#252525]"
+              />
+            </div>
+            <div className="w-full md:w-48">
+              <Select
+                options={[
+                  { value: 'all', label: 'Todas las categorías' },
+                  ...CATEGORIES
+                ]}
+                value={selectedCategory}
+                onChange={(val) => setSelectedCategory(val)}
+              />
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Editor de Medalla */}
-      {editingBadge && (
-        <Card className="p-6">
-          <h2 className="text-xl font-medium mb-4">{editingBadge.id ? 'Editar Medalla' : 'Crear Nueva Medalla'}</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">Nombre del Logro</label>
-              <Input
-                id="name"
-                value={editingBadge.name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingBadge({ ...editingBadge, name: e.target.value })}
-                className="mt-1 block w-full"
-              />
-            </div>
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700">Descripción</label>
-              <Input
-                id="description"
-                value={editingBadge.description}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditingBadge({ ...editingBadge, description: e.target.value })}
-                className="mt-1 block w-full"
-              />
-            </div>
-            <div>
-              <label htmlFor="icon" className="block text-sm font-medium text-gray-700">Icono</label>
-              <Select
+      {/* Achievements Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {filteredAchievements.map((achievement) => (
+          <Card 
+            key={achievement.id} 
+            className="bg-[#1E1E1E] border-white/10 hover:border-brand-orange/50 transition-colors"
+          >
+            <CardContent className="p-4 flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-brand-orange/20 to-brand-orange/5 flex items-center justify-center mb-3 text-3xl">
+                {achievement.icon || achievement.iconName || '🏆'}
+              </div>
+              
+              <h3 className="text-lg font-semibold text-white mb-1">{achievement.name}</h3>
+              <p className="text-sm text-gray-400 mb-3 line-clamp-2">{achievement.description || 'Sin descripción'}</p>
+              
+              <div className="flex flex-wrap gap-2 mb-3 justify-center">
+                {achievement.category && (
+                  <Badge className={getCategoryColor(achievement.category)}>
+                    {achievement.category}
+                  </Badge>
+                )}
+                {achievement.difficulty && (
+                  <Badge className={getDifficultyColor(achievement.difficulty)}>
+                    {achievement.difficulty}
+                  </Badge>
+                )}
+                {achievement.status && (
+                  <Badge variant={achievement.status === 'published' ? 'success' : 'default'}>
+                    {achievement.status === 'published' ? 'Publicado' : 'Borrador'}
+                  </Badge>
+                )}
+              </div>
 
-                value={editingBadge.icon}
-              onChange={(value: string) => setEditingBadge({ ...editingBadge, icon: value })}
-                options={[
-                  { label: '🛒 Carrito', value: '🛒' },
-                  { label: '🏆 Trofeo', value: '🏆' },
-                  { label: '💰 Dinero', value: '💰' },
-                  { label: '⭐ Estrella', value: '⭐' },
-                  { label: '🎁 Regalo', value: '🎁' },
-                ]}
-                className="mt-1 block w-full"
-              />
-            </div>
-            <div>
-              <label htmlFor="condition" className="block text-sm font-medium text-gray-700">Condición</label>
-              <Select
+              {achievement.rewardPoints && (
+                <div className="text-sm text-brand-orange font-bold mb-3">
+                  +{achievement.rewardPoints} pts
+                </div>
+              )}
 
-                value={editingBadge.condition}
-              onChange={(value: string) => setEditingBadge({ ...editingBadge, condition: value })}
-                options={[
-                  { label: 'Pedidos > X', value: 'Pedidos > X' },
-                  { label: 'Gasto > Y', value: 'Gasto > Y' },
-                  { label: 'Producto Z comprado', value: 'Producto Z comprado' },
-                ]}
-                className="mt-1 block w-full"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end space-x-2 mt-6">
-            <Button variant="ghost" onClick={handleCancel}>Cancelar</Button>
-            <Button onClick={handleSave}>Guardar</Button>
-          </div>
+              <div className="flex gap-2 mt-auto pt-3 w-full">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleEdit(achievement)}
+                  className="flex-1"
+                >
+                  Editar
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => handleDelete(achievement.id)}
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {filteredAchievements.length === 0 && (
+        <Card className="bg-[#1E1E1E] border-white/10">
+          <CardContent className="p-12 text-center">
+            <p className="text-gray-400 mb-4">No se encontraron logros</p>
+            <Button onClick={handleCreateNew} variant="outline">
+              Crear Primer Logro
+            </Button>
+          </CardContent>
         </Card>
       )}
+
+      {/* Edit/Create Modal */}
+      <Modal isOpen={isModalOpen} onClose={handleCancel}>
+        <ModalHeader>
+          {editingAchievement?.id ? 'Editar Logro' : 'Crear Nuevo Logro'}
+        </ModalHeader>
+        <ModalBody>
+          {editingAchievement && (
+            <div className="space-y-4">
+              <Input
+                label="Nombre del Logro *"
+                value={editingAchievement.name}
+                onChange={(e) => setEditingAchievement({ ...editingAchievement, name: e.target.value })}
+                placeholder="Ej. Primera Cerveza"
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Descripción
+                </label>
+                <textarea
+                  value={editingAchievement.description || ''}
+                  onChange={(e) => setEditingAchievement({ ...editingAchievement, description: e.target.value })}
+                  placeholder="Describe el logro..."
+                  rows={3}
+                  className="w-full px-4 py-2 bg-[#252525] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-orange/50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Select
+                  label="Categoría"
+                  options={CATEGORIES}
+                  value={editingAchievement.category || 'cervezas'}
+                  onChange={(val) => setEditingAchievement({ ...editingAchievement, category: val })}
+                />
+                <Select
+                  label="Dificultad"
+                  options={DIFFICULTIES}
+                  value={editingAchievement.difficulty || 'fácil'}
+                  onChange={(val) => setEditingAchievement({ ...editingAchievement, difficulty: val as any })}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Puntos de Recompensa"
+                  type="number"
+                  value={editingAchievement.rewardPoints?.toString() || '0'}
+                  onChange={(e) => setEditingAchievement({ ...editingAchievement, rewardPoints: parseInt(e.target.value) || 0 })}
+                />
+                <Input
+                  label="Orden de Visualización"
+                  type="number"
+                  value={editingAchievement.displayOrder?.toString() || '0'}
+                  onChange={(e) => setEditingAchievement({ ...editingAchievement, displayOrder: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+
+              <Input
+                label="Icono (emoji o nombre)"
+                value={editingAchievement.icon || editingAchievement.iconName || ''}
+                onChange={(e) => setEditingAchievement({ ...editingAchievement, icon: e.target.value, iconName: e.target.value })}
+                placeholder="🏆 o trophy"
+              />
+
+              <Input
+                label="Color de Acento"
+                type="color"
+                value={editingAchievement.accentColor || '#ff6b35'}
+                onChange={(e) => setEditingAchievement({ ...editingAchievement, accentColor: e.target.value })}
+              />
+
+              <Select
+                label="Estado"
+                options={STATUS_OPTIONS}
+                value={editingAchievement.status || 'draft'}
+                onChange={(val) => setEditingAchievement({ ...editingAchievement, status: val as any })}
+              />
+
+              <Input
+                label="URL Icono Bloqueado"
+                value={editingAchievement.iconLockedUrl || ''}
+                onChange={(e) => setEditingAchievement({ ...editingAchievement, iconLockedUrl: e.target.value })}
+                placeholder="https://..."
+              />
+
+              <Input
+                label="URL Icono Desbloqueado"
+                value={editingAchievement.iconUnlockedUrl || ''}
+                onChange={(e) => setEditingAchievement({ ...editingAchievement, iconUnlockedUrl: e.target.value })}
+                placeholder="https://..."
+              />
+            </div>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="ghost" onClick={handleCancel}>Cancelar</Button>
+          <Button onClick={handleSave} isLoading={isSaving} leftIcon={<Save className="w-4 h-4" />}>
+            Guardar
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 };

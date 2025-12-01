@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutGrid, 
@@ -6,10 +6,11 @@ import {
   Plus, 
   Search, 
   Eye,
-  Star
+  Star,
+  Loader2
 } from 'lucide-react';
-import { MOCK_PRODUCTS, MOCK_CHARACTERS } from '../../data/mockFactory';
-import { Product, Character } from '../../types/core';
+import { MOCK_CHARACTERS } from '../../data/mockFactory';
+import { Product, Character, ProductStatus, InventoryType } from '../../types/core';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -23,6 +24,12 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table/Table';
+import { 
+  getProducts, 
+  createProduct, 
+  updateFeaturedConfig 
+} from '../../features/products/api/productService';
+import { getProductTotalStock } from '../../features/products/api/productVariantService';
 
 // Simulated stock status since it's not on the main Product type (it's on Variants)
 type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
@@ -33,37 +40,17 @@ interface ProductWithStock extends Product {
   characterId?: string; // ID del personaje relacionado
 }
 
-// Enriched mock data
-const INITIAL_PRODUCTS: ProductWithStock[] = MOCK_PRODUCTS.map((p, index) => {
-  const stockLevel = Math.floor(Math.random() * 100);
-  let stockStatus: StockStatus = 'IN_STOCK';
-  if (stockLevel === 0) stockStatus = 'OUT_OF_STOCK';
-  else if (stockLevel < 10) stockStatus = 'LOW_STOCK';
-  
-  // El primer producto será la cerveza del mes de ejemplo
-  const featuredConfig = index === 0 ? {
-    isFeatured: true,
-    featuredStartDate: new Date().toISOString().split('T')[0],
-    featuredEndDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0],
-    featuredType: 'beer_of_month',
-  } : undefined;
-  
-  return {
-    ...p,
-    stockLevel,
-    stockStatus,
-    featuredConfig,
-  };
-});
-
 const ProductList = () => {
   const navigate = useNavigate();
-  const [products, setProducts] = useState<ProductWithStock[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<ProductWithStock[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [stockFilter, setStockFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
     sku: '',
@@ -78,6 +65,68 @@ const ProductList = () => {
     tags: [] as string[],
     characterId: '',
   });
+
+  // Cargar productos desde Supabase con debounce para búsqueda
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const filters: { category?: string; search?: string } = {};
+        
+        if (categoryFilter !== 'all') {
+          filters.category = categoryFilter;
+        }
+        
+        if (searchQuery) {
+          filters.search = searchQuery;
+        }
+        
+        const fetchedProducts = await getProducts(filters);
+        
+        // Convertir a ProductWithStock (calculando stock real desde variantes)
+        const productsWithStock: ProductWithStock[] = await Promise.all(
+          fetchedProducts.map(async (p) => {
+            try {
+              // Calcular stock real desde product_variants
+              const stockLevel = await getProductTotalStock(p.id);
+              let stockStatus: StockStatus = 'IN_STOCK';
+              if (stockLevel === 0) stockStatus = 'OUT_OF_STOCK';
+              else if (stockLevel < 10) stockStatus = 'LOW_STOCK';
+              
+              return {
+                ...p,
+                stockLevel,
+                stockStatus,
+              };
+            } catch (err) {
+              // Si hay error calculando stock, usar 0
+              console.error(`Error calculating stock for product ${p.id}:`, err);
+              return {
+                ...p,
+                stockLevel: 0,
+                stockStatus: 'OUT_OF_STOCK' as StockStatus,
+              };
+            }
+          })
+        );
+        
+        setProducts(productsWithStock);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError('Error al cargar los productos. Por favor, intenta de nuevo.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Debounce para búsqueda: esperar 500ms después de que el usuario deje de escribir
+    const timeoutId = setTimeout(() => {
+      loadProducts();
+    }, searchQuery ? 500 : 0);
+
+    return () => clearTimeout(timeoutId);
+  }, [categoryFilter, searchQuery]);
 
   // Extract unique categories for filter
   const categories = useMemo(() => {
@@ -95,56 +144,68 @@ const ProductList = () => {
     { value: 'OUT_OF_STOCK', label: 'Sin Stock' },
   ];
 
+  // El filtrado de búsqueda y categoría se hace en Supabase
+  // Solo filtramos por stock localmente ya que viene calculado
   const filteredProducts = useMemo(() => {
     return products.filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          product.sku.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
       const matchesStock = stockFilter === 'all' || product.stockStatus === stockFilter;
-
-      return matchesSearch && matchesCategory && matchesStock;
+      return matchesStock;
     });
-  }, [products, searchQuery, categoryFilter, stockFilter]);
+  }, [products, stockFilter]);
 
-  const handleCreateProduct = () => {
+  const handleCreateProduct = async () => {
     if (!newProduct.name || !newProduct.sku || !newProduct.category) {
       alert('Por favor completa los campos obligatorios: Nombre, SKU y Categoría');
       return;
     }
 
-    const product: ProductWithStock = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: newProduct.name,
-      sku: newProduct.sku,
-      slug: newProduct.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-*|-*$/g, ''),
-      description: newProduct.description,
-      basePrice: parseFloat(newProduct.price) || 0,
-      category: newProduct.category,
-      status: newProduct.status as any,
-      images: ['https://via.placeholder.com/150'],
-      tags: newProduct.tags,
-      inventoryType: 'SINGLE' as any,
-      stockLevel: 0,
-      stockStatus: 'OUT_OF_STOCK',
-      characterId: newProduct.characterId || undefined,
-    };
+    try {
+      setIsCreating(true);
+      
+      const productData: Omit<Product, 'id'> = {
+        name: newProduct.name,
+        sku: newProduct.sku,
+        slug: newProduct.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+        description: newProduct.description,
+        basePrice: parseFloat(newProduct.price) || 0,
+        category: newProduct.category,
+        status: newProduct.status as ProductStatus,
+        images: ['https://via.placeholder.com/150'],
+        tags: newProduct.tags,
+        inventoryType: InventoryType.SINGLE,
+      };
 
-    setProducts([product, ...products]);
-    setIsModalOpen(false);
-    setNewProduct({ 
-      name: '', 
-      sku: '', 
-      price: '', 
-      category: '', 
-      status: 'DRAFT',
-      description: '',
-      abv: '',
-      ibu: '',
-      srm: '',
-      beerType: '',
-      tags: [],
-      characterId: '',
-    });
+      const createdProduct = await createProduct(productData);
+      
+      // Agregar stock simulado (TODO: obtener de variantes)
+      const productWithStock: ProductWithStock = {
+        ...createdProduct,
+        stockLevel: 0,
+        stockStatus: 'OUT_OF_STOCK',
+      };
+
+      setProducts([productWithStock, ...products]);
+      setIsModalOpen(false);
+      setNewProduct({ 
+        name: '', 
+        sku: '', 
+        price: '', 
+        category: '', 
+        status: 'DRAFT',
+        description: '',
+        abv: '',
+        ibu: '',
+        srm: '',
+        beerType: '',
+        tags: [],
+        characterId: '',
+      });
+    } catch (err: any) {
+      console.error('Error creating product:', err);
+      alert('Error al crear el producto: ' + (err.message || JSON.stringify(err)));
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const getStockBadgeColor = (status: StockStatus) => {
@@ -176,15 +237,62 @@ const ProductList = () => {
     navigate(`/admin/products/edit?id=${productId}`);
   };
 
-  const handleSetBeerOfMonth = (product: ProductWithStock) => {
+  const handleSetBeerOfMonth = async (product: ProductWithStock) => {
     const isCurrentlyBeerOfMonth = product.featuredConfig?.isFeatured && 
                                    product.featuredConfig?.featuredType === 'beer_of_month';
     
-    if (isCurrentlyBeerOfMonth) {
-      // Si ya es cerveza del mes, preguntar si quiere quitarla
-      if (window.confirm(`¿Quitar "${product.name}" como Cerveza del Mes?`)) {
+    try {
+      if (isCurrentlyBeerOfMonth) {
+        // Si ya es cerveza del mes, preguntar si quiere quitarla
+        if (window.confirm(`¿Quitar "${product.name}" como Cerveza del Mes?`)) {
+          await updateFeaturedConfig(product.id, {
+            ...product.featuredConfig,
+            isFeatured: false,
+          });
+          
+          // Actualizar estado local
+          setProducts(prev => prev.map(p => {
+            if (p.id === product.id) {
+              return {
+                ...p,
+                featuredConfig: {
+                  ...p.featuredConfig,
+                  isFeatured: false,
+                },
+              };
+            }
+            return p;
+          }));
+        }
+      } else {
+        // Si no es cerveza del mes, marcarla como tal
+        // Primero quitar cualquier otra cerveza del mes existente
+        const otherBeerOfMonth = products.find(
+          p => p.featuredConfig?.featuredType === 'beer_of_month' && p.id !== product.id
+        );
+        
+        if (otherBeerOfMonth) {
+          await updateFeaturedConfig(otherBeerOfMonth.id, {
+            ...otherBeerOfMonth.featuredConfig,
+            isFeatured: false,
+          });
+        }
+        
+        const today = new Date();
+        const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        
+        const newFeaturedConfig = {
+          isFeatured: true,
+          featuredStartDate: today.toISOString().split('T')[0],
+          featuredEndDate: endOfMonth.toISOString().split('T')[0],
+          featuredType: 'beer_of_month' as const,
+        };
+        
+        await updateFeaturedConfig(product.id, newFeaturedConfig);
+        
+        // Actualizar estado local
         setProducts(prev => prev.map(p => {
-          if (p.id === product.id) {
+          if (p.featuredConfig?.featuredType === 'beer_of_month' && p.id !== product.id) {
             return {
               ...p,
               featuredConfig: {
@@ -193,42 +301,20 @@ const ProductList = () => {
               },
             };
           }
+          if (p.id === product.id) {
+            return {
+              ...p,
+              featuredConfig: newFeaturedConfig,
+            };
+          }
           return p;
         }));
+        
+        alert(`"${product.name}" ha sido marcada como Cerveza del Mes`);
       }
-    } else {
-      // Si no es cerveza del mes, marcarla como tal
-      // Primero quitar cualquier otra cerveza del mes existente
-      setProducts(prev => prev.map(p => {
-        // Quitar otras cervezas del mes
-        if (p.featuredConfig?.featuredType === 'beer_of_month' && p.id !== product.id) {
-          return {
-            ...p,
-            featuredConfig: {
-              ...p.featuredConfig,
-              isFeatured: false,
-            },
-          };
-        }
-        // Marcar esta como cerveza del mes
-        if (p.id === product.id) {
-          const today = new Date();
-          const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-          
-          return {
-            ...p,
-            featuredConfig: {
-              isFeatured: true,
-              featuredStartDate: today.toISOString().split('T')[0],
-              featuredEndDate: endOfMonth.toISOString().split('T')[0],
-              featuredType: 'beer_of_month',
-            },
-          };
-        }
-        return p;
-      }));
-      
-      alert(`"${product.name}" ha sido marcada como Cerveza del Mes`);
+    } catch (err) {
+      console.error('Error updating featured config:', err);
+      alert('Error al actualizar la configuración destacada. Por favor, intenta de nuevo.');
     }
   };
 
@@ -300,6 +386,21 @@ const ProductList = () => {
         </div>
       </div>
 
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+          <span className="ml-3 text-text-secondary">Cargando productos...</span>
+        </div>
+      ) : (
+        <>
       {/* Content */}
       {viewMode === 'list' ? (
         <div className="rounded-xl border border-white/5 bg-[#2C2C2C] overflow-hidden">
@@ -462,6 +563,8 @@ const ProductList = () => {
             </Card>
           ))}
         </div>
+      )}
+        </>
       )}
 
       {/* Create Product Modal */}
@@ -772,9 +875,22 @@ const ProductList = () => {
           <Button variant="outline" onClick={() => setIsModalOpen(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleCreateProduct} className="bg-[#ff6b35] hover:bg-[#ff6b35]/90">
-            <Plus className="w-4 h-4 mr-2" />
-            Crear Cerveza
+          <Button 
+            onClick={handleCreateProduct} 
+            className="bg-[#ff6b35] hover:bg-[#ff6b35]/90"
+            disabled={isCreating}
+          >
+            {isCreating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Crear Cerveza
+              </>
+            )}
           </Button>
         </ModalFooter>
       </Modal>

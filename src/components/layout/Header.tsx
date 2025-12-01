@@ -1,9 +1,11 @@
 import React from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { Search, Bell, ChevronRight, ChevronDown, Sun, Moon, Settings, LogOut, User, Menu } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import { Input } from '../ui/Input';
+import { useAuth } from '../../context/AuthContext';
+import Avatar from '../ui/Avatar';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -12,10 +14,36 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick, className }: HeaderProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const pathnames = location.pathname.split('/').filter((x) => x);
   const [notifications] = React.useState(3);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const [isDark, setIsDark] = React.useState(true); // Mock theme state
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Cerrar dropdown al hacer clic fuera
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isProfileOpen && !target.closest('.profile-dropdown')) {
+        setIsProfileOpen(false);
+      }
+    };
+
+    if (isProfileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isProfileOpen]);
 
   const breadcrumbMap: Record<string, string> = {
     'crm': 'CRM Clientes',
@@ -93,14 +121,20 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
         <div className="h-8 w-px bg-white/10 mx-2 hidden sm:block" />
 
         {/* Profile Dropdown */}
-        <div className="relative">
+        <div className="relative profile-dropdown">
           <button 
             onClick={() => setIsProfileOpen(!isProfileOpen)}
             className="flex items-center gap-2 hover:bg-white/5 p-1.5 rounded-lg transition-colors outline-none focus:ring-2 focus:ring-brand/50"
           >
+            <Avatar 
+              src={user?.avatarUrl} 
+              alt={user?.fullName || 'Admin'} 
+              size="sm"
+              fallback={user?.fullName?.substring(0, 2).toUpperCase() || 'A'}
+            />
             <div className="hidden md:block text-left">
-              <p className="text-sm font-medium text-white leading-none">Admin User</p>
-              <p className="text-xs text-text-secondary mt-1">admin@mrcoolcat.com</p>
+              <p className="text-sm font-medium text-white leading-none">{user?.fullName || 'Admin'}</p>
+              <p className="text-xs text-text-secondary mt-1">{user?.email || ''}</p>
             </div>
             <ChevronDown className={cn("h-4 w-4 text-text-secondary transition-transform", isProfileOpen && "rotate-180")} />
           </button>
@@ -109,7 +143,8 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
           {isProfileOpen && (
             <div className="absolute right-0 mt-2 w-56 rounded-xl bg-brand-surface border border-white/10 shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
               <div className="px-3 py-2 border-b border-white/10 mb-1">
-                <p className="text-sm font-medium text-white">Mi Cuenta</p>
+                <p className="text-sm font-medium text-white">{user?.fullName}</p>
+                <p className="text-xs text-text-secondary mt-0.5">{user?.role}</p>
               </div>
               
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
@@ -123,7 +158,10 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
               
               <div className="my-1 border-t border-white/10" />
               
-              <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors">
+              <button 
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+              >
                 <LogOut className="h-4 w-4" />
                 Cerrar Sesión
               </button>

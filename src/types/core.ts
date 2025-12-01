@@ -149,12 +149,16 @@ export interface User {
   email: string;
   /** Full name of the user */
   fullName: string;
+  /** Phone number */
+  phone?: string;
   /** Role determining access permissions */
   role: UserRole;
   /** URL to the user's avatar image */
   avatarUrl?: string;
   /** Account status */
   status: UserStatus;
+  /** Creation timestamp */
+  createdAt: Date;
   /** Timestamp of the last successful login */
   lastLogin?: Date;
   /** Flexible JSON object for user preferences and extra data */
@@ -218,6 +222,40 @@ export interface Product {
 
 /**
  * Product variant (e.g., size, pack size) linked to a parent product.
+ * Matches the Supabase schema for product_variants table.
+ */
+export interface ProductVariant {
+  /** Unique Identifier */
+  id: string;
+  /** ID of the parent Product */
+  productId: string;
+  /** Variant specific SKU */
+  sku: string;
+  /** Variant name (e.g., 'Pack x6', 'Botella 330ml') */
+  name: string;
+  /** Price of the variant */
+  price: number;
+  /** Promotional price (optional) */
+  promotionalPrice?: number;
+  /** Weight in kilograms */
+  weightKg: number;
+  /** Dimensions (length, width, height in cm) */
+  dimensions?: {
+    length: number;
+    width: number;
+    height: number;
+  };
+  /** Barcode (optional) */
+  barcode?: string;
+  /** If this is the default variant */
+  isDefault: boolean;
+  /** Current stock quantity */
+  stockQuantity: number;
+}
+
+/**
+ * @deprecated Use ProductVariant instead
+ * Legacy variant interface for backward compatibility
  */
 export interface Variant {
   /** Unique Identifier */
@@ -244,6 +282,8 @@ export interface Order {
   orderNumber: string;
   /** ID of the customer who placed the order */
   customerId: string;
+  /** Email of the customer */
+  customerEmail?: string;
   /** Total order amount */
   totalAmount: number;
   /** Current order status */
@@ -283,21 +323,153 @@ export interface Store {
 /**
  * Ticketed event or experience.
  */
+/**
+ * Event entity representing events (tastings, festivals, etc.).
+ * Matches the Supabase schema for events table.
+ */
 export interface Event {
   /** Unique Identifier */
   id: string;
   /** Event Title */
   title: string;
-  /** Date and time of the event */
-  date: Date;
-  /** Venue location name or address */
-  location: string;
-  /** Total attendee capacity */
-  capacity: number;
-  /** Number of tickets sold/claimed */
-  soldTickets: number;
-  /** Event scheduling status */
-  status: EventStatus;
+  /** Description of the event */
+  description?: string;
+  /** URL of cover image */
+  coverImageUrl?: string;
+  /** URL of hero image (alternative) */
+  heroImage?: string;
+  /** Category of the event */
+  category?: string;
+  /** Tags for the event */
+  tags?: string[];
+  /** Status of the event */
+  status: 'published' | 'draft' | 'cancelled';
+  /** Start date and time */
+  startDate: string;
+  /** End date and time */
+  endDate: string;
+  /** Name of the location */
+  locationName?: string;
+  /** Location (alternative) */
+  location?: string;
+  /** City */
+  city?: string;
+  /** Full address */
+  address?: string;
+  /** Latitude for map */
+  latitude?: number;
+  /** Longitude for map */
+  longitude?: number;
+  /** Maximum capacity */
+  capacity?: number;
+  /** Maximum attendees (alternative) */
+  maxAttendees?: number;
+  /** Registered attendees */
+  registeredAttendees?: number;
+  /** Sold tickets */
+  soldTickets?: number;
+  /** Price of the event */
+  price?: number;
+  /** Currency */
+  currency?: string;
+  /** Whether the event is free */
+  isFree?: boolean;
+  /** Whether the event is premium */
+  isPremium?: boolean;
+  /** Whether the event is recurring */
+  isRecurring?: boolean;
+  /** Recurring (alternative) */
+  recurring?: boolean;
+  /** Points reward */
+  pointsReward?: number;
+  /** Distance in km (calculated) */
+  distanceKm?: number;
+  /** Age restriction */
+  ageRestriction?: string;
+  /** Creation timestamp */
+  createdAt: string;
+}
+
+/**
+ * Achievement entity representing gamification badges/logros.
+ * Matches the Supabase schema for achievements table.
+ */
+export interface Achievement {
+  /** Unique Identifier */
+  id: string;
+  /** Name of the achievement */
+  name: string;
+  /** Title (alternative) */
+  title?: string;
+  /** Description of the achievement */
+  description?: string;
+  /** Category */
+  category?: string;
+  /** Difficulty level */
+  difficulty?: 'fácil' | 'medio' | 'difícil';
+  /** Reward points */
+  rewardPoints?: number;
+  /** Points reward (alternative) */
+  pointsReward?: number;
+  /** Reward description */
+  rewardDescription?: string;
+  /** Reward (alternative) */
+  reward?: string;
+  /** Reward icon */
+  rewardIcon?: string;
+  /** Icon name */
+  iconName?: string;
+  /** Icon (alternative) */
+  icon?: string;
+  /** URL of locked icon */
+  iconLockedUrl?: string;
+  /** Icon locked (alternative) */
+  iconLocked?: string;
+  /** URL of unlocked icon */
+  iconUnlockedUrl?: string;
+  /** Icon unlocked (alternative) */
+  iconUnlocked?: string;
+  /** Accent color */
+  accentColor?: string;
+  /** Status */
+  status?: 'published' | 'draft';
+  /** Display order */
+  displayOrder?: number;
+  /** Progress percentage (default) */
+  progressPercentage?: number;
+  /** Creation timestamp */
+  createdAt: string;
+}
+
+/**
+ * Reward entity representing redeemable rewards with points.
+ * Matches the Supabase schema for rewards table.
+ */
+export interface Reward {
+  /** Unique Identifier */
+  id: string;
+  /** Title of the reward */
+  title: string;
+  /** Name (alternative) */
+  name?: string;
+  /** Description of the reward */
+  description?: string;
+  /** Icon name */
+  iconName?: string;
+  /** Icon (alternative) */
+  icon?: string;
+  /** Points required */
+  pointsRequired: number;
+  /** Points (alternative) */
+  points?: number;
+  /** Whether the reward is active */
+  isActive: boolean;
+  /** Available (alternative) */
+  available?: boolean;
+  /** Category */
+  category?: string;
+  /** Creation timestamp */
+  createdAt: string;
 }
 
 /**
@@ -322,11 +494,68 @@ export interface AuditLog {
 
 /**
  * Represents a character entity.
+ * Matches the Supabase schema for characters table.
  */
 export interface Character {
+  /** Unique Identifier */
   id: string;
+  /** Character Name */
   name: string;
+  /** URL-friendly identifier */
+  slug: string;
+  /** Role of the character */
   role: string;
-  color: string;
-  fullBodyArtUrl: string;
+  /** Role subtitle */
+  roleSubtitle?: string;
+  /** Full biography */
+  biography?: string;
+  /** Short description */
+  description?: string;
+  /** Signature quote */
+  signatureQuote?: string;
+  /** Alternative quote */
+  quote?: string;
+  /** Avatar image URL */
+  avatarUrl?: string;
+  /** Cover image URL */
+  coverImageUrl?: string;
+  /** Video presentation URL */
+  videoPresentationUrl?: string;
+  /** Accent color (hex) */
+  accentColor: string;
+  /** Theme configuration */
+  themeConfig?: {
+    primaryColor?: string;
+    secondaryColor?: string;
+  };
+  /** Personality tags */
+  personalityTags?: string[];
+  /** Personality traits */
+  traits?: string[];
+  /** Interests */
+  interests?: string[];
+  /** Likes */
+  likes?: string[];
+  /** Signature beer name */
+  signatureBeer?: string;
+  /** Signature beer style */
+  signatureBeerStyle?: string;
+  /** Alternative beer name */
+  cerveza?: string;
+  /** Signature beer ABV */
+  signatureAbv?: string;
+  /** Alternative ABV */
+  abv?: string;
+  /** Beer type */
+  tipo?: string;
+  /** If the character is active */
+  isActive: boolean;
+  /** Creation timestamp */
+  createdAt: string;
+  
+  // Legacy fields for backward compatibility
+  /** @deprecated Use accentColor instead */
+  color?: string;
+  /** @deprecated Use avatarUrl or coverImageUrl instead */
+  fullBodyArtUrl?: string;
 }

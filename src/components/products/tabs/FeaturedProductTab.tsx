@@ -247,3 +247,10 @@ export const FeaturedProductTab: React.FC<FeaturedProductTabProps> = ({
   );
 };
 
+
+
+
+
+
+
+

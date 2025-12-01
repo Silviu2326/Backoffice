@@ -1,21 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CustomerFilters } from '../../components/crm/CustomerFilters';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import { Plus, Eye, Image as ImageIcon } from 'lucide-react';
+import { Plus, Eye, Image as ImageIcon, Loader2, Trash2 } from 'lucide-react';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Link } from 'react-router-dom';
+import { getCustomers, updateCustomer, createCustomer, deleteCustomer } from '../../features/crm/api/customerService';
+import { Customer as CustomerType, CustomerSegment } from '../../types/core';
+import { getAllOrders } from '../../features/orders/api/orderService';
 
 interface Customer {
   id: string;
   name: string;
   email: string;
   phone: string;
-  totalSpent: number;
-  lastOrder: string;
+  createdAt: string;
   status: 'active' | 'inactive' | 'lead';
   avatar: string;
 }
@@ -47,14 +49,9 @@ const customerColumns: Column<Customer>[] = [
     accessorKey: 'phone',
   },
   {
-    header: 'Total Gastado',
-    accessorKey: 'totalSpent',
-    render: (row: Customer) => `$${row.totalSpent.toFixed(2)}`,
-  },
-  {
-    header: 'Último Pedido',
-    accessorKey: 'lastOrder',
-    render: (row: Customer) => new Date(row.lastOrder).toLocaleDateString(),
+    header: 'Creado en',
+    accessorKey: 'createdAt',
+    render: (row: Customer) => new Date(row.createdAt).toLocaleDateString(),
   },
   {
     header: 'Estado',
@@ -92,93 +89,14 @@ const AVAILABLE_AVATARS = [
   { name: 'SIFRINA', filename: 'SIFRINA.png', path: '/assets/avatares/SIFRINA.png' },
 ];
 
-// Asignar avatares a los clientes mock de forma variada
-const mockCustomers: Customer[] = [
-  {
-    id: '1',
-    name: 'Juan Perez',
-    email: 'juan.perez@example.com',
-    phone: '555-1234',
-    totalSpent: 1250.75,
-    lastOrder: '2025-10-20',
-    status: 'active',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'COOL CAT')?.path || AVAILABLE_AVATARS[0].path,
-  },
-  {
-    id: '2',
-    name: 'Maria Garcia',
-    email: 'maria.garcia@example.com',
-    phone: '555-5678',
-    totalSpent: 890.50,
-    lastOrder: '2025-11-15',
-    status: 'active',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'MORENA')?.path || AVAILABLE_AVATARS[1].path,
-  },
-  {
-    id: '3',
-    name: 'Carlos Sanchez',
-    email: 'carlos.sanchez@example.com',
-    phone: '555-9012',
-    totalSpent: 300.00,
-    lastOrder: '2025-09-01',
-    status: 'inactive',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'BUCK')?.path || AVAILABLE_AVATARS[2].path,
-  },
-  {
-    id: '4',
-    name: 'Ana Lopez',
-    email: 'ana.lopez@example.com',
-    phone: '555-3456',
-    totalSpent: 50.25,
-    lastOrder: '2025-11-18',
-    status: 'lead',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'SIFRINA')?.path || AVAILABLE_AVATARS[3].path,
-  },
-  {
-    id: '5',
-    name: 'Pedro Martinez',
-    email: 'pedro.martinez@example.com',
-    phone: '555-7890',
-    totalSpent: 2100.00,
-    lastOrder: '2025-11-20',
-    status: 'active',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'CANDELA')?.path || AVAILABLE_AVATARS[4].path,
-  },
-  {
-    id: '6',
-    name: 'Laura Rodriguez',
-    email: 'laura.rodriguez@example.com',
-    phone: '555-2468',
-    totalSpent: 450.30,
-    lastOrder: '2025-11-10',
-    status: 'active',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'CATIRA')?.path || AVAILABLE_AVATARS[5].path,
-  },
-  {
-    id: '7',
-    name: 'Roberto Fernandez',
-    email: 'roberto.fernandez@example.com',
-    phone: '555-1357',
-    totalSpent: 120.00,
-    lastOrder: '2025-10-05',
-    status: 'inactive',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'GUAJIRA')?.path || AVAILABLE_AVATARS[6].path,
-  },
-  {
-    id: '8',
-    name: 'Carmen Torres',
-    email: 'carmen.torres@example.com',
-    phone: '555-9876',
-    totalSpent: 675.80,
-    lastOrder: '2025-11-19',
-    status: 'lead',
-    avatar: AVAILABLE_AVATARS.find(a => a.name === 'MEDUSA')?.path || AVAILABLE_AVATARS[7].path,
-  },
-];
-
 export const CustomerList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('all');
+  const [segmentFilter, setSegmentFilter] = useState<CustomerSegment | 'all'>('all');
   const [newCustomer, setNewCustomer] = useState({
     name: '',
     email: '',
@@ -186,6 +104,142 @@ export const CustomerList: React.FC = () => {
     status: 'active' as 'active' | 'inactive' | 'lead',
     avatar: '',
   });
+
+  const handleDeleteCustomer = async (id: string) => {
+    if (!window.confirm('¿Estás seguro de que deseas eliminar este cliente? Esta acción no se puede deshacer.')) {
+      return;
+    }
+
+    try {
+      await deleteCustomer(id);
+      setCustomers(prev => prev.filter(c => c.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting customer:', err);
+      alert('Error al eliminar el cliente: ' + (err.message || 'Error desconocido'));
+    }
+  };
+
+  const customerColumns: Column<Customer>[] = useMemo(() => [
+    {
+      header: 'Cliente',
+      accessorKey: 'name',
+      render: (row: Customer) => {
+        const avatarName = row.avatar 
+          ? AVAILABLE_AVATARS.find(a => a.path === row.avatar)?.name || 'Sin avatar'
+          : 'Sin avatar';
+        return (
+          <div className="flex flex-col">
+            <Link to={`/admin/crm/customers/${row.id}`} className="text-blue-600 hover:underline">
+              {row.name}
+            </Link>
+            <span className="text-xs text-text-secondary">{avatarName}</span>
+          </div>
+        );
+      },
+    },
+    {
+      header: 'Email',
+      accessorKey: 'email',
+    },
+    {
+      header: 'Teléfono',
+      accessorKey: 'phone',
+    },
+    {
+      header: 'Creado en',
+      accessorKey: 'createdAt',
+      render: (row: Customer) => new Date(row.createdAt).toLocaleDateString(),
+    },
+    {
+      header: 'Estado',
+      accessorKey: 'status',
+      render: (row: Customer) => {
+        const variants: Record<string, "success" | "danger" | "warning"> = {
+          active: 'success',
+          inactive: 'danger',
+          lead: 'warning',
+        };
+        return <Badge variant={variants[row.status] || 'default'}>{row.status}</Badge>;
+      },
+    },
+    {
+      header: 'Acciones',
+      render: (row: Customer) => (
+        <div className="flex items-center gap-2">
+          <Link to={`/admin/crm/customers/${row.id}`}>
+            <Button variant="outline" size="sm" leftIcon={<Eye className="h-4 w-4" />}>
+              Ver
+            </Button>
+          </Link>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-red-500 hover:text-red-700 hover:bg-red-50"
+            onClick={() => handleDeleteCustomer(row.id)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    },
+  ], []);
+
+  // Cargar clientes desde Supabase
+  useEffect(() => {
+    const loadCustomers = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const filters: {
+          search?: string;
+          segment?: CustomerSegment;
+          status?: 'active' | 'inactive';
+        } = {};
+
+        if (searchTerm) {
+          filters.search = searchTerm;
+        }
+
+        if (segmentFilter !== 'all') {
+          filters.segment = segmentFilter;
+        }
+
+        if (statusFilter !== 'all') {
+          filters.status = statusFilter;
+        }
+
+        const customersData = await getCustomers(filters);
+        
+        // Mapear Customer a la interfaz de la tabla
+        const mappedCustomers = await Promise.all(
+          customersData.map(async (customer) => {
+            // Obtener pedidos para calcular estadísticas (si se necesita en el futuro)
+            // const orders = await getAllOrders({ customerId: customer.id });
+            
+            return {
+              id: customer.id,
+              name: customer.fullName,
+              email: customer.email,
+              phone: customer.phone || '', 
+              createdAt: customer.createdAt.toISOString(),
+              status: customer.status === 'ACTIVE' ? 'active' : 'inactive' as 'active' | 'inactive' | 'lead',
+              avatar: customer.avatarUrl || '',
+            } as Customer;
+          })
+        );
+
+        setCustomers(mappedCustomers);
+      } catch (err) {
+        console.error('Error loading customers:', err);
+        setError('Error al cargar los clientes. Por favor, inténtalo de nuevo.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCustomers();
+  }, [searchTerm, statusFilter, segmentFilter]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewCustomer({ ...newCustomer, [e.target.name]: e.target.value });
@@ -195,17 +249,50 @@ export const CustomerList: React.FC = () => {
       setNewCustomer({ ...newCustomer, status: value as any });
   };
 
-  const handleCreateCustomer = () => {
-    const customer: Customer = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...newCustomer,
-      totalSpent: 0,
-      lastOrder: new Date().toISOString(),
-      avatar: newCustomer.avatar || '',
-    };
-    setCustomers([...customers, customer]);
-    setIsModalOpen(false);
-    setNewCustomer({ name: '', email: '', phone: '', status: 'active', avatar: '' });
+  const handleCreateCustomer = async () => {
+    try {
+      if (!newCustomer.name || !newCustomer.email) {
+        alert('El nombre y el email son obligatorios');
+        return;
+      }
+
+      setIsLoading(true);
+      const created = await createCustomer({
+        name: newCustomer.name,
+        email: newCustomer.email,
+        phone: newCustomer.phone,
+        status: newCustomer.status,
+        avatar: newCustomer.avatar,
+      });
+
+      // Mapear el cliente creado a la interfaz local Customer
+      const mappedCreated: Customer = {
+        id: created.id,
+        name: created.fullName,
+        email: created.email,
+        phone: newCustomer.phone,
+        createdAt: new Date().toISOString(),
+        status: created.status === 'ACTIVE' ? 'active' : 'inactive' as 'active' | 'inactive' | 'lead',
+        avatar: created.avatarUrl || '',
+      };
+
+      // Actualizar la lista localmente
+      setCustomers([mappedCreated, ...customers]);
+      
+      setIsModalOpen(false);
+      setNewCustomer({ name: '', email: '', phone: '', status: 'active', avatar: '' });
+      alert('Cliente creado correctamente');
+    } catch (err: any) {
+      console.error('Error creating customer:', err);
+      // Si el error es de clave foránea, explicamos mejor
+      if (err.message && err.message.includes('foreign key constraint')) {
+        alert('Error: No se pudo crear el perfil porque la base de datos requiere un usuario de Auth existente. En este entorno demo, esto puede ser una limitación.');
+      } else {
+        alert('Error al crear el cliente: ' + (err.message || 'Error desconocido'));
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -217,19 +304,37 @@ export const CustomerList: React.FC = () => {
         </Button>
       </div>
       
-      <CustomerFilters />
+      <CustomerFilters 
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        segmentFilter={segmentFilter}
+        onSegmentChange={setSegmentFilter}
+      />
       
       <div className="mt-6">
-        <DataTable
-          columns={customerColumns}
-          data={customers}
-          pagination={{
-            page: 1,
-            pageSize: 10,
-            total: customers.length,
-            onPageChange: () => {},
-          }}
-        />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
+            <span className="ml-3 text-text-secondary">Cargando clientes...</span>
+          </div>
+        ) : error ? (
+          <div className="bg-status-error/10 border border-status-error/20 rounded-lg p-4 text-status-error">
+            {error}
+          </div>
+        ) : (
+          <DataTable
+            columns={customerColumns}
+            data={customers}
+            pagination={{
+              page: 1,
+              pageSize: 10,
+              total: customers.length,
+              onPageChange: () => {},
+            }}
+          />
+        )}
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>

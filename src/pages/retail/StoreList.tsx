@@ -1,60 +1,137 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, MapPin, Clock } from 'lucide-react';
-import { Card } from '../../components/ui/Card';
+import { Plus, Loader2, Search } from 'lucide-react';
 import Button from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
-
-interface Store {
-  id: string;
-  name: string;
-  address: string;
-  imageUrl: string;
-  openingTime: number; // e.g., 9 for 9 AM
-  closingTime: number; // e.g., 17 for 5 PM
-}
-
-const mockStores: Store[] = [
-  {
-    id: '1',
-    name: 'Tienda Central',
-    address: 'Calle Falsa 123, Ciudad',
-    imageUrl: 'https://via.placeholder.com/150',
-    openingTime: 9,
-    closingTime: 18,
-  },
-  {
-    id: '2',
-    name: 'Sucursal Norte',
-    address: 'Avenida Siempre Viva 456, Pueblo',
-    imageUrl: 'https://via.placeholder.com/150',
-    openingTime: 10,
-    closingTime: 20,
-  },
-  {
-    id: '3',
-    name: 'Tienda Sur',
-    address: 'Bulevar de los Sueños Rotos 789, Villa',
-    imageUrl: 'https://via.placeholder.com/150',
-    openingTime: 8,
-    closingTime: 17,
-  },
-];
+import { Select } from '../../components/ui/Select';
+import { DataTable, Column } from '../../components/ui/DataTable';
+import { getStores, createStore } from '../../features/retail/api/storeService';
+import { Store } from '../../features/retail/api/storeService';
 
 const StoreList: React.FC = () => {
   const navigate = useNavigate();
+  const [stores, setStores] = useState<Store[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cityFilter, setCityFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const getCurrentStatus = (openingTime: number, closingTime: number) => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    if (currentHour >= openingTime && currentHour < closingTime) {
-      return <Badge variant="success">Abierto</Badge>;
+  const [newStore, setNewStore] = useState({
+    name: '',
+    address: '',
+    city: '',
+    phone: '',
+    allowPickup: true,
+    pickupInstructions: '',
+    isActive: true,
+  });
+
+  // Cargar tiendas desde Supabase
+  useEffect(() => {
+    const loadStores = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const filters: { isActive?: boolean; city?: string; search?: string } = {};
+        
+        if (statusFilter === 'active') {
+          filters.isActive = true;
+        } else if (statusFilter === 'inactive') {
+          filters.isActive = false;
+        }
+        
+        if (cityFilter !== 'all') {
+          filters.city = cityFilter;
+        }
+        
+        if (searchQuery) {
+          filters.search = searchQuery;
+        }
+        
+        const fetchedStores = await getStores(filters);
+        setStores(fetchedStores);
+      } catch (err) {
+        console.error('Error loading stores:', err);
+        setError('Error al cargar las tiendas. Por favor, intenta de nuevo.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStores();
+  }, [cityFilter, statusFilter, searchQuery]);
+
+  // Obtener ciudades únicas para el filtro
+  const cities = Array.from(new Set(stores.map(s => s.city))).sort();
+
+  const handleCreateStore = async () => {
+    if (!newStore.name || !newStore.address || !newStore.city || !newStore.phone) {
+      alert('Por favor completa los campos obligatorios: Nombre, Dirección, Ciudad y Teléfono');
+      return;
     }
-    return <Badge variant="danger">Cerrado</Badge>;
+
+    try {
+      setIsCreating(true);
+      const createdStore = await createStore(newStore);
+      
+      setStores([createdStore, ...stores]);
+      setIsCreateModalOpen(false);
+      setNewStore({
+        name: '',
+        address: '',
+        city: '',
+        phone: '',
+        allowPickup: true,
+        pickupInstructions: '',
+        isActive: true,
+      });
+      
+      alert('Tienda creada correctamente');
+    } catch (err: any) {
+      console.error('Error creating store:', err);
+      alert('Error al crear la tienda: ' + (err.message || JSON.stringify(err)));
+    } finally {
+      setIsCreating(false);
+    }
   };
+
+  const columns: Column<Store>[] = [
+    {
+      header: 'Nombre',
+      accessorKey: 'name',
+      className: 'font-medium text-white',
+    },
+    {
+      header: 'Dirección',
+      accessorKey: 'address',
+    },
+    {
+      header: 'Ciudad',
+      accessorKey: 'city',
+    },
+    {
+      header: 'Teléfono',
+      accessorKey: 'phone',
+    },
+    {
+      header: 'Acciones',
+      render: (store) => (
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={() => navigate(`/admin/retail/${store.id}`)}
+        >
+          Gestionar
+        </Button>
+      ),
+      className: 'text-right',
+    },
+  ];
 
   return (
     <div className="p-6 space-y-6">
@@ -71,81 +148,131 @@ const StoreList: React.FC = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockStores.map((store) => (
-          <Card key={store.id} className="flex flex-col overflow-hidden border-white/10 bg-[#1E1E1E]">
-            <div className="relative h-48 w-full">
-              <img 
-                src={store.imageUrl} 
-                alt={store.name} 
-                className="h-full w-full object-cover" 
-              />
-              <div className="absolute top-4 right-4">
-                {getCurrentStatus(store.openingTime, store.closingTime)}
-              </div>
-            </div>
-            <div className="flex flex-grow flex-col p-5">
-              <h2 className="mb-2 text-xl font-bold text-white">{store.name}</h2>
-              
-              <div className="mb-4 space-y-2 text-sm text-text-secondary">
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
-                  <span>{store.address}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 shrink-0" />
-                  <span>{store.openingTime}:00 - {store.closingTime}:00</span>
-                </div>
-              </div>
-
-              <div className="mt-auto pt-4 border-t border-white/10">
-                <Button 
-                  variant="outline" 
-                  className="w-full"
-                  onClick={() => navigate(`/admin/retail/${store.id}`)}
-                >
-                  Gestionar
-                </Button>
-              </div>
-            </div>
-          </Card>
-        ))}
+      {/* Filters */}
+      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between bg-[#2C2C2C] p-4 rounded-xl border border-white/5">
+        <div className="flex flex-1 flex-col sm:flex-row gap-4 w-full lg:w-auto">
+          <div className="w-full sm:w-72">
+            <Input
+              placeholder="Buscar tiendas..."
+              leftIcon={<Search className="w-4 h-4" />}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <Select
+              options={[
+                { value: 'all', label: 'Todas las ciudades' },
+                ...cities.map(c => ({ value: c, label: c }))
+              ]}
+              value={cityFilter}
+              onChange={setCityFilter}
+              placeholder="Ciudad"
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <Select
+              options={[
+                { value: 'all', label: 'Todos los estados' },
+                { value: 'active', label: 'Activas' },
+                { value: 'inactive', label: 'Inactivas' },
+              ]}
+              value={statusFilter}
+              onChange={setStatusFilter}
+              placeholder="Estado"
+            />
+          </div>
+        </div>
       </div>
 
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
-        <ModalHeader>Añadir Nueva Tienda</ModalHeader>
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+          <span className="ml-3 text-text-secondary">Cargando tiendas...</span>
+        </div>
+      ) : (
+        <div className="bg-[#1E1E1E] rounded-lg border border-white/10 overflow-hidden">
+          <DataTable 
+            data={stores} 
+            columns={columns} 
+          />
+        </div>
+      )}
+
+      {/* Create Store Modal */}
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} size="lg">
+        <ModalHeader>
+          <h2 className="text-xl font-semibold text-white">Añadir Nueva Tienda</h2>
+        </ModalHeader>
         <ModalBody className="space-y-4">
           <Input
-            label="Nombre de la tienda"
+            label="Nombre de la tienda *"
             placeholder="Ej: Tienda Central"
+            value={newStore.name}
+            onChange={(e) => setNewStore({ ...newStore, name: e.target.value })}
           />
           <Input
-            label="Dirección"
+            label="Dirección *"
             placeholder="Dirección completa"
+            value={newStore.address}
+            onChange={(e) => setNewStore({ ...newStore, address: e.target.value })}
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Hora Apertura (0-23)"
-              type="number"
-              placeholder="9"
-              min={0}
-              max={23}
+              label="Ciudad *"
+              placeholder="Ej: Madrid"
+              value={newStore.city}
+              onChange={(e) => setNewStore({ ...newStore, city: e.target.value })}
             />
             <Input
-              label="Hora Cierre (0-23)"
-              type="number"
-              placeholder="20"
-              min={0}
-              max={23}
+              label="Teléfono *"
+              placeholder="+34 600 123 456"
+              value={newStore.phone}
+              onChange={(e) => setNewStore({ ...newStore, phone: e.target.value })}
             />
           </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="allowPickup"
+              checked={newStore.allowPickup}
+              onChange={(e) => setNewStore({ ...newStore, allowPickup: e.target.checked })}
+              className="w-4 h-4 rounded border-white/20 bg-[#3A3A3A] text-[#ff6b35] focus:ring-[#ff6b35]"
+            />
+            <label htmlFor="allowPickup" className="text-sm text-text-secondary">
+              Permite recogida (Click & Collect)
+            </label>
+          </div>
+          {newStore.allowPickup && (
+            <Input
+              label="Instrucciones de recogida"
+              placeholder="Ej: Recogida en mostrador principal"
+              value={newStore.pickupInstructions}
+              onChange={(e) => setNewStore({ ...newStore, pickupInstructions: e.target.value })}
+            />
+          )}
         </ModalBody>
         <ModalFooter>
-          <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
+          <Button variant="outline" onClick={() => setIsCreateModalOpen(false)} disabled={isCreating}>
             Cancelar
           </Button>
-          <Button onClick={() => setIsCreateModalOpen(false)}>
-            Crear Tienda
+          <Button onClick={handleCreateStore} disabled={isCreating}>
+            {isCreating ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creando...
+              </>
+            ) : (
+              'Crear Tienda'
+            )}
           </Button>
         </ModalFooter>
       </Modal>

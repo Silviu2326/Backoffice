@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
-import { FileUpload } from '../../ui/FileUpload';
+import React, { useState, useRef, useEffect } from 'react';
+import FileUpload from '../../ui/FileUpload';
+import { Card, CardContent } from '../../ui/Card';
 import { X, Image as ImageIcon, Star, GripVertical } from 'lucide-react';
 import { cn } from '../../../utils/cn';
+import { uploadFile } from '../../../utils/storage';
 
 interface MediaTabProps {
   initialImages?: string[];
@@ -12,17 +14,54 @@ export const MediaTab: React.FC<MediaTabProps> = ({ initialImages = [], onImages
   // We use a local state to manage the images (URLs)
   const [images, setImages] = useState<string[]>(initialImages);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Use ref to track latest images state for event handlers to avoid stale closures
+  const imagesRef = useRef(images);
 
-  // Handle file upload (simulate upload by creating object URLs)
-  const handleFilesChange = (files: File[]) => {
-    const newImageUrls = files.map(file => URL.createObjectURL(file));
-    const updatedImages = [...images, ...newImageUrls];
-    setImages(updatedImages);
-    onImagesChange?.(updatedImages);
+  // Sync ref with state
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  // Sync state with props (if parent updates images externally)
+  useEffect(() => {
+    setImages(initialImages);
+  }, [initialImages]);
+
+  // Handle file upload (upload to Supabase Storage)
+  const handleFilesChange = async (files: File[]) => {
+    if (files.length === 0) return;
+
+    try {
+      setIsUploading(true);
+      const uploadPromises = files.map(async (file) => {
+        // Use a unique name for the file
+        const timestamp = new Date().getTime();
+        const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const path = `products/${timestamp}_${cleanName}`;
+        
+        // Upload using the shared utility (uses 'media' bucket)
+        return await uploadFile('media', path, file);
+      });
+
+      const newImageUrls = await Promise.all(uploadPromises);
+      const updatedImages = [...images, ...newImageUrls];
+      
+      imagesRef.current = updatedImages; // Update ref immediately
+      setImages(updatedImages);
+      onImagesChange?.(updatedImages);
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      alert('Error al subir las imágenes. Por favor, intenta de nuevo.');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const removeImage = (index: number) => {
     const updatedImages = images.filter((_, i) => i !== index);
+    imagesRef.current = updatedImages; // Update ref immediately
     setImages(updatedImages);
     onImagesChange?.(updatedImages);
   };
@@ -32,6 +71,7 @@ export const MediaTab: React.FC<MediaTabProps> = ({ initialImages = [], onImages
     const imageToMove = images[index];
     const otherImages = images.filter((_, i) => i !== index);
     const updatedImages = [imageToMove, ...otherImages];
+    imagesRef.current = updatedImages; // Update ref immediately
     setImages(updatedImages);
     onImagesChange?.(updatedImages);
   };
@@ -54,40 +94,43 @@ export const MediaTab: React.FC<MediaTabProps> = ({ initialImages = [], onImages
     newImages.splice(draggedIndex, 1);
     newImages.splice(index, 0, draggedItem);
 
+    imagesRef.current = newImages; // Update ref immediately
     setImages(newImages);
     setDraggedIndex(index);
   };
 
   const handleDragEnd = () => {
     setDraggedIndex(null);
-    onImagesChange?.(images);
+    // Use ref to get the latest order
+    onImagesChange?.(imagesRef.current);
   };
 
   return (
     <div className="space-y-6 p-4">
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">Subir Imágenes</h3>
+      <div className="bg-[#2C2C2C] p-4 rounded-lg border border-white/10 shadow-sm">
+        <h3 className="text-lg font-medium text-white mb-4">Subir Imágenes</h3>
         <FileUpload
           accept="image/*"
           multiple={true}
           onFilesChange={handleFilesChange}
+          isUploading={isUploading}
           className="w-full"
         />
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-sm text-text-secondary mt-2">
           Soporta JPG, PNG, WEBP. Máximo 5MB por archivo.
         </p>
       </div>
 
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-[#2C2C2C] p-4 rounded-lg border border-white/10 shadow-sm">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Galería</h3>
-          <span className="text-sm text-gray-500">{images.length} imágenes</span>
+          <h3 className="text-lg font-medium text-white">Galería</h3>
+          <span className="text-sm text-text-secondary">{images.length} imágenes</span>
         </div>
 
         {images.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200">
-            <ImageIcon className="mx-auto h-12 w-12 text-gray-300" />
-            <p className="mt-2 text-sm text-gray-500">No hay imágenes subidas</p>
+          <div className="text-center py-12 bg-white/5 rounded-lg border-2 border-dashed border-white/10">
+            <ImageIcon className="mx-auto h-12 w-12 text-text-secondary opacity-50" />
+            <p className="mt-2 text-sm text-text-secondary">No hay imágenes subidas</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -99,9 +142,9 @@ export const MediaTab: React.FC<MediaTabProps> = ({ initialImages = [], onImages
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDragEnd={handleDragEnd}
                 className={cn(
-                  "group relative aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-all cursor-move",
-                  draggedIndex === index ? "opacity-50 border-blue-500" : "border-transparent hover:border-gray-300",
-                  index === 0 && "border-indigo-500 ring-2 ring-indigo-100"
+                  "group relative aspect-square bg-white/5 rounded-lg overflow-hidden border-2 transition-all cursor-move",
+                  draggedIndex === index ? "opacity-50 border-brand-orange" : "border-transparent hover:border-white/20",
+                  index === 0 && "border-brand-orange ring-2 ring-brand-orange/20"
                 )}
               >
                 <img

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
@@ -15,10 +15,11 @@ import {
   Trash2, 
   AlertCircle,
   CheckCircle2,
-  Clock
+  Clock,
+  Loader2
 } from 'lucide-react';
-import { MOCK_PRODUCTS } from '../../data/mockFactory';
 import { Product } from '../../types/core';
+import { getProducts, updateFeaturedConfig } from '../../features/products/api/productService';
 
 interface FeaturedProduct extends Product {
   featuredConfig?: {
@@ -29,34 +30,40 @@ interface FeaturedProduct extends Product {
   };
 }
 
-// Mock data with featured products
-const MOCK_FEATURED_PRODUCTS: FeaturedProduct[] = MOCK_PRODUCTS.slice(0, 5).map((product, index) => ({
-  ...product,
-  featuredConfig: index === 0 ? {
-    isFeatured: true,
-    featuredStartDate: '2024-12-01',
-    featuredEndDate: '2024-12-31',
-    featuredType: 'beer_of_month',
-  } : index === 1 ? {
-    isFeatured: true,
-    featuredStartDate: '2024-12-15',
-    featuredEndDate: '2025-01-15',
-    featuredType: 'featured',
-  } : undefined,
-}));
-
 const FeaturedProductManager: React.FC = () => {
-  const [products, setProducts] = useState<FeaturedProduct[]>(MOCK_FEATURED_PRODUCTS);
+  const [products, setProducts] = useState<FeaturedProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<FeaturedProduct | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     productId: '',
     featuredType: 'beer_of_month',
     startDate: '',
     endDate: '',
   });
+
+  // Cargar productos desde Supabase
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const fetchedProducts = await getProducts();
+        setProducts(fetchedProducts as FeaturedProduct[]);
+      } catch (err) {
+        console.error('Error loading products:', err);
+        setError('Error al cargar los productos');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   const featuredTypes = [
     { value: 'beer_of_month', label: 'Cerveza del Mes' },
@@ -131,45 +138,78 @@ const FeaturedProductManager: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.productId) {
-      // Find product by search or create new
-      const product = products.find(p => p.id === formData.productId);
-      if (!product) return;
+      alert('Por favor selecciona un producto');
+      return;
     }
 
-    setProducts(prev => prev.map(p => {
-      if (p.id === formData.productId || (selectedProduct && p.id === selectedProduct.id)) {
-        return {
-          ...p,
-          featuredConfig: {
-            isFeatured: true,
-            featuredStartDate: formData.startDate || undefined,
-            featuredEndDate: formData.endDate || undefined,
-            featuredType: formData.featuredType,
-          },
-        };
-      }
-      return p;
-    }));
+    try {
+      setIsSaving(true);
+      
+      const featuredConfig = {
+        isFeatured: true,
+        featuredStartDate: formData.startDate || undefined,
+        featuredEndDate: formData.endDate || undefined,
+        featuredType: formData.featuredType,
+      };
 
-    setIsModalOpen(false);
-    setSelectedProduct(null);
+      await updateFeaturedConfig(formData.productId, featuredConfig);
+
+      // Actualizar estado local
+      setProducts(prev => prev.map(p => {
+        if (p.id === formData.productId) {
+          return {
+            ...p,
+            featuredConfig,
+          };
+        }
+        return p;
+      }));
+
+      setIsModalOpen(false);
+      setSelectedProduct(null);
+      setFormData({
+        productId: '',
+        featuredType: 'beer_of_month',
+        startDate: '',
+        endDate: '',
+      });
+    } catch (err) {
+      console.error('Error saving featured config:', err);
+      alert('Error al guardar la configuración destacada. Por favor, intenta de nuevo.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleRemoveFeatured = (productId: string) => {
-    setProducts(prev => prev.map(p => {
-      if (p.id === productId) {
-        return {
-          ...p,
-          featuredConfig: {
-            ...p.featuredConfig,
-            isFeatured: false,
-          },
-        };
-      }
-      return p;
-    }));
+  const handleRemoveFeatured = async (productId: string) => {
+    if (!window.confirm('¿Estás seguro de quitar este producto destacado?')) {
+      return;
+    }
+
+    try {
+      await updateFeaturedConfig(productId, {
+        isFeatured: false,
+      });
+
+      // Actualizar estado local
+      setProducts(prev => prev.map(p => {
+        if (p.id === productId) {
+          return {
+            ...p,
+            featuredConfig: {
+              ...p.featuredConfig,
+              isFeatured: false,
+            },
+          };
+        }
+        return p;
+      }));
+    } catch (err) {
+      console.error('Error removing featured config:', err);
+      alert('Error al quitar la configuración destacada. Por favor, intenta de nuevo.');
+    }
   };
 
   const columns: Column<FeaturedProduct>[] = [
@@ -249,8 +289,24 @@ const FeaturedProductManager: React.FC = () => {
     },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+        <span className="ml-3 text-text-secondary">Cargando productos...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+          <p className="text-red-400">{error}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -428,11 +484,18 @@ const FeaturedProductManager: React.FC = () => {
           </div>
         </ModalBody>
         <ModalFooter>
-          <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+          <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isSaving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave}>
-            Guardar
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin inline" />
+                Guardando...
+              </>
+            ) : (
+              'Guardar'
+            )}
           </Button>
         </ModalFooter>
       </Modal>
@@ -441,4 +504,11 @@ const FeaturedProductManager: React.FC = () => {
 };
 
 export default FeaturedProductManager;
+
+
+
+
+
+
+
 

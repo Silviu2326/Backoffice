@@ -1,14 +1,31 @@
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
-import { AlertCircle, Clock, AlertTriangle } from 'lucide-react';
-
-const alerts = [
-  { id: 'ORD-9921', issue: 'Pago Pendiente > 24h', time: 'Hace 2h', severity: 'high' },
-  { id: 'ORD-9918', issue: 'Envío Retrasado', time: 'Hace 5h', severity: 'medium' },
-  { id: 'ORD-9855', issue: 'Disputa Abierta', time: 'Hace 1d', severity: 'critical' },
-  { id: 'ORD-9842', issue: 'Stock Insuficiente', time: 'Hace 1d', severity: 'high' },
-];
+import { AlertCircle, Clock, AlertTriangle, Loader2 } from 'lucide-react';
+import { getOrderAlerts, OrderAlert } from '../../features/dashboard/api/dashboardService';
 
 export function OrderAlertsWidget() {
+  const [alerts, setAlerts] = useState<OrderAlert[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadAlerts = async () => {
+      try {
+        setIsLoading(true);
+        const orderAlerts = await getOrderAlerts();
+        setAlerts(orderAlerts);
+      } catch (error) {
+        console.error('Error loading order alerts:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAlerts();
+    // Recargar alertas cada 5 minutos
+    const interval = setInterval(loadAlerts, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -19,8 +36,17 @@ export function OrderAlertsWidget() {
         <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
-          {alerts.map((alert) => (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-brand-orange" />
+          </div>
+        ) : alerts.length === 0 ? (
+          <div className="text-center py-8 text-text-secondary">
+            <p>No hay alertas pendientes</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {alerts.map((alert) => (
             <div key={alert.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-full ${
@@ -40,8 +66,9 @@ export function OrderAlertsWidget() {
                 {alert.time}
               </div>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

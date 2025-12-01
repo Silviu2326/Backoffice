@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Drawer from '../../components/ui/Drawer';
 import Button from '../../components/ui/Button';
@@ -7,49 +8,67 @@ import { cn } from '../../utils/cn';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { Event } from '../../types/core';
+import { getAllEvents, createEvent } from '../../features/events/api/eventService';
 
-// Types
-interface Event {
-  id: string;
-  title: string;
-  date: string; // YYYY-MM-DD
-  type: 'concierto' | 'conferencia' | 'taller' | 'reunion';
-  time: string;
-  location: string;
-}
-
-// Mock Data
-const INITIAL_EVENTS: Event[] = [
-  { id: '1', title: 'Conferencia Tech 2025', date: '2025-11-20', type: 'conferencia', time: '09:00 AM', location: 'Centro de Convenciones' },
-  { id: '2', title: 'Festival de Música', date: '2025-11-20', type: 'concierto', time: '06:00 PM', location: 'Parque de la Ciudad' },
-  { id: '3', title: 'Taller de React', date: '2025-11-15', type: 'taller', time: '10:00 AM', location: 'Tech Hub' },
-  { id: '4', title: 'Reunión de Comunidad', date: '2025-11-25', type: 'reunion', time: '07:00 PM', location: 'Café Centro' },
-  { id: '5', title: 'Noche de Jazz', date: '2025-11-05', type: 'concierto', time: '08:00 PM', location: 'Blue Note' },
-  { id: '6', title: 'Simposio de IA', date: '2025-12-10', type: 'conferencia', time: '09:30 AM', location: 'Auditorio Universitario' },
-];
-
+// Map category to colors
 const EVENT_COLORS: Record<string, string> = {
-  concierto: 'bg-purple-500',
-  conferencia: 'bg-blue-500',
-  taller: 'bg-green-500',
-  reunion: 'bg-orange-500',
+  'Cata': 'bg-purple-500',
+  'Festival': 'bg-blue-500',
+  'Taller': 'bg-green-500',
+  'Conferencia': 'bg-orange-500',
+  'Concierto': 'bg-pink-500',
+  'Reunión': 'bg-yellow-500',
+  'default': 'bg-gray-500',
 };
 
 const WEEKDAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
 const EventCalendar = () => {
-  const [events, setEvents] = useState<Event[]>(INITIAL_EVENTS);
+  const navigate = useNavigate();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [newEvent, setNewEvent] = useState({
     title: '',
     date: '',
-    type: 'conferencia',
     time: '',
-    location: ''
+    category: 'Cata',
+    location: '',
+    maxAttendees: '' // New state for max attendees
   });
+
+  // Load events from Supabase
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setIsLoading(true);
+      const allEvents = await getAllEvents();
+      setEvents(allEvents);
+    } catch (error) {
+      console.error('Error loading events:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Convert ISO date to YYYY-MM-DD
+  const formatDateToDay = (isoDate: string): string => {
+    return isoDate.split('T')[0];
+  };
+
+  // Convert YYYY-MM-DD and time to ISO datetime
+  const combineDateAndTime = (date: string, time: string): string => {
+    if (!date || !time) return '';
+    return `${date}T${time}:00`;
+  };
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -77,32 +96,72 @@ const EventCalendar = () => {
   const getEventsForDay = (day: number) => {
     const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
     const dateStr = `${currentDate.getFullYear()}-${month}-${day.toString().padStart(2, '0')}`;
-    return events.filter(e => e.date === dateStr);
+    return events.filter(e => {
+      const eventDate = formatDateToDay(e.startDate);
+      return eventDate === dateStr;
+    });
   };
 
   const getEventsForSelectedDate = () => {
     if (!selectedDate) return [];
-    return events.filter(e => e.date === selectedDate);
+    return events.filter(e => {
+      const eventDate = formatDateToDay(e.startDate);
+      return eventDate === selectedDate;
+    });
   };
 
-  const handleCreateEvent = () => {
-      const event: Event = {
-          id: Math.random().toString(36).substr(2, 9),
-          title: newEvent.title,
-          date: newEvent.date,
-          type: newEvent.type as any,
-          time: newEvent.time,
-          location: newEvent.location
-      };
-      setEvents([...events, event]);
+  const handleCreateEvent = async () => {
+    if (!newEvent.title || !newEvent.date || !newEvent.time) {
+      alert('Por favor completa todos los campos obligatorios');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const startDateTime = combineDateAndTime(newEvent.date, newEvent.time);
+      const endDateTime = combineDateAndTime(newEvent.date, newEvent.time); // Same time for now, can be adjusted
+
+      const createdEvent = await createEvent({
+        title: newEvent.title,
+        description: '',
+        category: newEvent.category,
+        status: 'draft',
+        startDate: startDateTime,
+        endDate: endDateTime,
+        location: newEvent.location,
+        locationName: newEvent.location,
+        isFree: true,
+        maxAttendees: newEvent.maxAttendees ? parseInt(newEvent.maxAttendees) : undefined, // Include maxAttendees
+      });
+
+      // Update local state with the new event immediately
+      setEvents(prevEvents => [...prevEvents, createdEvent]);
+
       setIsCreateModalOpen(false);
-      setNewEvent({ title: '', date: '', type: 'conferencia', time: '', location: '' });
+      setNewEvent({ title: '', date: '', time: '', category: 'Cata', location: '', maxAttendees: '' });
+      alert('Evento creado correctamente');
+    } catch (error) {
+      console.error('Error creating event:', error);
+      alert('Error al crear el evento. Por favor, intenta de nuevo.');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const formatSelectedDate = () => {
     if (!selectedDate) return '';
     const [year, month, day] = selectedDate.split('-').map(Number);
     return new Date(year, month - 1, day).toLocaleDateString('es-ES', { dateStyle: 'full' });
+  };
+
+  const formatTime = (isoDate: string): string => {
+    const date = new Date(isoDate);
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const getEventColor = (category?: string): string => {
+    if (!category) return EVENT_COLORS.default;
+    return EVENT_COLORS[category] || EVENT_COLORS.default;
   };
 
   const renderCalendar = () => {
@@ -151,7 +210,7 @@ const EventCalendar = () => {
           <div className="flex flex-col gap-1.5 mt-1 overflow-hidden">
             {dayEvents.slice(0, 3).map((event, idx) => (
               <div key={idx} className="flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-white/10">
-                 <div className={cn("w-2 h-2 rounded-full shrink-0", EVENT_COLORS[event.type])} />
+                 <div className={cn("w-2 h-2 rounded-full shrink-0", getEventColor(event.category))} />
                  <span className="text-xs text-gray-300 truncate font-medium">{event.title}</span>
               </div>
             ))}
@@ -165,6 +224,14 @@ const EventCalendar = () => {
 
     return days;
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
@@ -222,8 +289,10 @@ const EventCalendar = () => {
                         <CardContent className="p-4 space-y-3">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
-                                    <span className={cn("w-2 h-2 rounded-full", EVENT_COLORS[event.type])} />
-                                    <span className="text-xs text-gray-400 uppercase font-semibold tracking-wider">{event.type}</span>
+                                    <span className={cn("w-2 h-2 rounded-full", getEventColor(event.category))} />
+                                    <span className="text-xs text-gray-400 uppercase font-semibold tracking-wider">
+                                        {event.category || 'Evento'}
+                                    </span>
                                 </div>
                             </div>
                             <h3 className="text-lg font-semibold text-white">{event.title}</h3>
@@ -231,16 +300,21 @@ const EventCalendar = () => {
                             <div className="space-y-2 text-sm text-gray-400 pt-2 border-t border-white/5">
                                 <div className="flex items-center gap-2">
                                     <Clock className="w-4 h-4 text-gray-500" />
-                                    {event.time}
+                                    {formatTime(event.startDate)}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <MapPin className="w-4 h-4 text-gray-500" />
-                                    {event.location}
+                                    {event.location || event.locationName || event.address || 'Sin ubicación'}
                                 </div>
                             </div>
                             
                             <div className="pt-2">
-                                <Button variant="outline" size="sm" className="w-full">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full"
+                                  onClick={() => navigate(`/admin/events/${event.id}`)}
+                                >
                                     Ver Detalles
                                 </Button>
                             </div>
@@ -268,7 +342,7 @@ const EventCalendar = () => {
                     label="Título del Evento"
                     value={newEvent.title}
                     onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="Ej. Conferencia Anual"
+                    placeholder="Ej. Cata de Cervezas Artesanales"
                 />
                 <div className="grid grid-cols-2 gap-4">
                     <Input
@@ -285,27 +359,38 @@ const EventCalendar = () => {
                     />
                 </div>
                 <Select
-                    label="Tipo de Evento"
+                    label="Categoría"
                     options={[
-                        { value: 'conferencia', label: 'Conferencia' },
-                        { value: 'concierto', label: 'Concierto' },
-                        { value: 'taller', label: 'Taller' },
-                        { value: 'reunion', label: 'Reunión' },
+                        { value: 'Cata', label: 'Cata' },
+                        { value: 'Festival', label: 'Festival' },
+                        { value: 'Taller', label: 'Taller' },
+                        { value: 'Conferencia', label: 'Conferencia' },
+                        { value: 'Concierto', label: 'Concierto' },
+                        { value: 'Reunión', label: 'Reunión' },
                     ]}
-                    value={newEvent.type}
-                    onChange={(val) => setNewEvent({ ...newEvent, type: val })}
+                    value={newEvent.category}
+                    onChange={(val) => setNewEvent({ ...newEvent, category: val })}
                 />
                 <Input
                     label="Ubicación"
                     value={newEvent.location}
                     onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                    placeholder="Ej. Auditorio Principal"
+                    placeholder="Ej. El Gato Cool Pub"
+                />
+                <Input
+                    label="Número Máximo de Participantes (Opcional)"
+                    type="number"
+                    value={newEvent.maxAttendees}
+                    onChange={(e) => setNewEvent({ ...newEvent, maxAttendees: e.target.value })}
+                    placeholder="Ej. 50"
                 />
             </div>
         </ModalBody>
         <ModalFooter>
             <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateEvent}>Guardar Evento</Button>
+            <Button onClick={handleCreateEvent} isLoading={isCreating}>
+                Guardar Evento
+            </Button>
         </ModalFooter>
       </Modal>
     </div>

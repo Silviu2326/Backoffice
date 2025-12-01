@@ -21,6 +21,7 @@ import OrderDetail from '../pages/orders/OrderDetail';
 import { RulesConfig } from '../pages/loyalty/RulesConfig';
 import GamificationDashboard from '../pages/loyalty/GamificationDashboard';
 import QuizManager from '../pages/gamification/QuizManager';
+import ServiceManager from '../pages/retail/ServiceManager';
 
 export interface RouteConfig {
   path: string;
@@ -38,6 +39,7 @@ export const routes: RouteConfig[] = [
   { path: '/admin/products/edit', component: ProductEditor, title: 'Editar Producto' },
   { path: '/admin/retail', component: StoreList, title: 'Tiendas' },
   { path: '/admin/retail/:id', component: StoreDetail, title: 'Detalle de Tienda' },
+  { path: '/admin/retail/services', component: ServiceManager, title: 'Gestión de Servicios' },
   { path: '/admin/characters', component: CharacterList, title: 'Personajes' },
   { path: '/admin/characters/new', component: CharacterEditor, title: 'Nuevo Personaje' },
   { path: '/admin/characters/:id', component: CharacterEditor, title: 'Editar Personaje' },

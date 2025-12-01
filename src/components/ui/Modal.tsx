@@ -107,7 +107,7 @@ const ModalHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className
 );
 
 const ModalBody: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className, children, ...props }) => (
-  <div className={cn("mb-4", className)} {...props}>
+  <div className={cn("mb-4 flex-1 overflow-y-auto min-h-0", className)} {...props}>
     {children}
   </div>
 );

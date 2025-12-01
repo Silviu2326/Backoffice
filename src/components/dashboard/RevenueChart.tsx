@@ -1,21 +1,7 @@
+import { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-// Mock data generator for the last 30 days
-const generateData = () => {
-  const data = [];
-  const today = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    data.push({
-      date: date.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
-      revenue: Math.floor(Math.random() * (15000 - 5000 + 1)) + 5000, // Random revenue
-    });
-  }
-  return data;
-};
-
-const data = generateData();
+import { getRevenueData, RevenueDataPoint } from '../../features/dashboard/api/dashboardService';
+import { Loader2 } from 'lucide-react';
 
 interface CustomTooltipProps { active?: boolean; payload?: Array<{ value: number; name: string; }>; label?: string; }
 
@@ -34,22 +20,55 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
 };
 
 export function RevenueChart() {
+  const [data, setData] = useState<RevenueDataPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [period, setPeriod] = useState<30 | 7 | 365>(30);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const revenueData = await getRevenueData(period);
+        setData(revenueData);
+      } catch (error) {
+        console.error('Error loading revenue data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [period]);
+
   return (
     <div className="w-full h-full min-h-[350px] bg-[#2C2C2C] p-6 rounded-xl shadow-lg border border-white/5">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-bold text-white">Evolución de Ventas</h3>
-        <select className="text-sm bg-[#1E1E1E] border-white/10 rounded-lg text-text-secondary focus:ring-[#F76934] focus:border-[#F76934] p-2 outline-none">
-          <option>Últimos 30 días</option>
-          <option>Últimos 7 días</option>
-          <option>Este año</option>
+        <select 
+          className="text-sm bg-[#1E1E1E] border-white/10 rounded-lg text-text-secondary focus:ring-[#F76934] focus:border-[#F76934] p-2 outline-none"
+          value={period}
+          onChange={(e) => setPeriod(Number(e.target.value) as 30 | 7 | 365)}
+        >
+          <option value={7}>Últimos 7 días</option>
+          <option value={30}>Últimos 30 días</option>
+          <option value={365}>Este año</option>
         </select>
       </div>
       <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-          >
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-6 w-6 animate-spin text-brand-orange" />
+          </div>
+        ) : data.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-text-secondary">
+            <p>No hay datos disponibles para el período seleccionado</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart
+              data={data}
+              margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+            >
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#F76934" stopOpacity={0.3}/>
@@ -82,6 +101,7 @@ export function RevenueChart() {
             />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

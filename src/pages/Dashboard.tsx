@@ -1,19 +1,67 @@
-import { DollarSign, ShoppingBag, Users, Activity, Calendar } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { DollarSign, ShoppingBag, Users, Calendar, Loader2 } from 'lucide-react';
 import { RevenueChart } from '../components/dashboard/RevenueChart';
 import KPIWidget from '../components/dashboard/KPIWidget';
 import { InventoryWidget } from '../components/dashboard/InventoryWidget';
-import { OrderAlertsWidget } from '../components/dashboard/OrderAlertsWidget';
 import { TopCustomersWidget } from '../components/dashboard/TopCustomersWidget';
-import { FunnelChart } from '../components/dashboard/FunnelChart';
-
-const stats = [
-  { name: 'Ingresos Totales', value: '24,500€', trend: 12.5, trendLabel: 'vs mes anterior', icon: DollarSign },
-  { name: 'Ticket Medio (AOV)', value: '85€', trend: 2.1, trendLabel: 'vs semana pasada', icon: ShoppingBag },
-  { name: 'Tasa de Conversión', value: '3.2%', trend: -0.5, trendLabel: 'vs ayer', icon: Activity },
-  { name: 'Pedidos Totales', value: '1,240', trend: 8, trendLabel: 'vs mes anterior', icon: Users },
-];
+import { getDashboardStats } from '../features/dashboard/api/dashboardService';
 
 export default function Dashboard() {
+  const [stats, setStats] = useState([
+    { name: 'Ingresos Totales', value: '0€', trend: 0, trendLabel: 'vs mes anterior', icon: DollarSign },
+    { name: 'Ticket Medio (AOV)', value: '0€', trend: 0, trendLabel: 'vs mes anterior', icon: ShoppingBag },
+    { name: 'Pedidos Totales', value: '0', trend: 0, trendLabel: 'vs mes anterior', icon: Users },
+  ]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setIsLoading(true);
+        const dashboardStats = await getDashboardStats('month');
+
+        setStats([
+          {
+            name: 'Ingresos Totales',
+            value: new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(dashboardStats.totalRevenue),
+            trend: dashboardStats.revenueTrend,
+            trendLabel: 'vs mes anterior',
+            icon: DollarSign,
+          },
+          {
+            name: 'Ticket Medio (AOV)',
+            value: new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(dashboardStats.averageOrderValue),
+            trend: dashboardStats.aovTrend,
+            trendLabel: 'vs mes anterior',
+            icon: ShoppingBag,
+          },
+          {
+            name: 'Pedidos Totales',
+            value: dashboardStats.totalOrders.toLocaleString('es-ES'),
+            trend: dashboardStats.ordersTrend,
+            trendLabel: 'vs mes anterior',
+            icon: Users,
+          },
+        ]);
+      } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStats();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
+        <span className="ml-3 text-text-secondary">Cargando estadísticas...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -38,7 +86,7 @@ export default function Dashboard() {
       </div>
 
       {/* Row 1: KPI Cards */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((item) => (
           <KPIWidget
             key={item.name}
@@ -51,23 +99,17 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Row 2: Main Charts & Critical Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 h-[400px]">
-          <RevenueChart />
-        </div>
+      {/* Row 2: Main Charts */}
+      <div className="grid grid-cols-1 gap-6">
         <div className="h-[400px]">
-          <OrderAlertsWidget />
+          <RevenueChart />
         </div>
       </div>
       
       {/* Row 3: Operational & Analysis Widgets */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
          <div className="h-[350px]">
             <InventoryWidget />
-         </div>
-         <div className="h-[350px]">
-            <FunnelChart />
          </div>
          <div className="h-[350px]">
             <TopCustomersWidget />

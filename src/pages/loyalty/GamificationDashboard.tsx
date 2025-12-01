@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
 import { 
   Trophy, 
@@ -14,7 +14,11 @@ import {
   Crown, 
   Search, 
   Filter,
-  Gamepad2
+  Gamepad2,
+  Gift,
+  Loader2,
+  Edit2,
+  Check
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -35,6 +39,14 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table/Table';
 import BadgeEditor from './BadgeEditor';
 import { RulesConfig } from './RulesConfig';
+import { 
+  getAllRewards, 
+  createReward, 
+  updateReward, 
+  deleteReward,
+  getRewardsByCategory 
+} from '../../features/gamification/api/rewardService';
+import { Reward } from '../../types/core';
 
 // --- Types ---
 interface Challenge {
@@ -253,6 +265,15 @@ export default function GamificationDashboard() {
     title: '', description: '', reward: 100, type: 'daily', status: 'active', icon: '🎯'
   });
 
+  // Rewards State
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [rewardsLoading, setRewardsLoading] = useState(false);
+  const [isRewardModalOpen, setIsRewardModalOpen] = useState(false);
+  const [editingReward, setEditingReward] = useState<Reward | null>(null);
+  const [rewardSearchTerm, setRewardSearchTerm] = useState('');
+  const [rewardCategoryFilter, setRewardCategoryFilter] = useState<string>('all');
+  const [rewardSortBy, setRewardSortBy] = useState<'points' | 'date'>('points');
+
   const handleCreateChallenge = () => {
     if (!newChallenge.title) return;
     const challenge: Challenge = {
@@ -273,6 +294,74 @@ export default function GamificationDashboard() {
 
   const handleDeleteChallenge = (id: string) => {
     setChallenges(challenges.filter(c => c.id !== id));
+  };
+
+  // Rewards Functions
+  const loadRewards = async () => {
+    try {
+      setRewardsLoading(true);
+      const allRewards = await getAllRewards();
+      setRewards(allRewards);
+    } catch (err) {
+      console.error('Error loading rewards:', err);
+    } finally {
+      setRewardsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // Load rewards when component mounts or when rewards tab might be accessed
+    loadRewards();
+  }, []);
+
+  const handleCreateNewReward = () => {
+    setEditingReward({
+      id: '',
+      title: '',
+      description: '',
+      pointsRequired: 0,
+      isActive: true,
+      category: 'general',
+      createdAt: new Date().toISOString(),
+    });
+    setIsRewardModalOpen(true);
+  };
+
+  const handleEditReward = (reward: Reward) => {
+    setEditingReward({ ...reward });
+    setIsRewardModalOpen(true);
+  };
+
+  const handleSaveReward = async () => {
+    if (!editingReward || !editingReward.title || editingReward.pointsRequired === undefined) {
+      return;
+    }
+
+    try {
+      if (editingReward.id) {
+        await updateReward(editingReward.id, editingReward);
+      } else {
+        await createReward(editingReward as Omit<Reward, 'id' | 'createdAt'>);
+      }
+      await loadRewards();
+      setIsRewardModalOpen(false);
+      setEditingReward(null);
+    } catch (err) {
+      console.error('Error saving reward:', err);
+    }
+  };
+
+  const handleDeleteReward = async (id: string) => {
+    if (!confirm('¿Estás seguro de que quieres eliminar esta recompensa?')) {
+      return;
+    }
+
+    try {
+      await deleteReward(id);
+      await loadRewards();
+    } catch (err) {
+      console.error('Error deleting reward:', err);
+    }
   };
 
   const filteredLeaderboard = MOCK_LEADERBOARD.filter(user => 
@@ -558,11 +647,218 @@ export default function GamificationDashboard() {
             <BadgeEditor /> 
         </TabsContent>
 
+        {/* --- Recompensas Tab --- */}
+        <TabsContent value="rewards" className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-white">Recompensas Disponibles</h2>
+            <Button onClick={handleCreateNewReward} leftIcon={<Plus className="w-4 h-4" />} className="bg-brand-orange hover:bg-brand-orange/90 text-white">
+              Nueva Recompensa
+            </Button>
+          </div>
+
+          {/* Filters */}
+          <Card className="bg-[#2C2C2C] border-white/5">
+            <CardContent className="p-4">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Buscar recompensas..."
+                    value={rewardSearchTerm}
+                    onChange={(e) => setRewardSearchTerm(e.target.value)}
+                    className="pl-9 bg-[#1A1A1A]"
+                  />
+                </div>
+                <div className="w-full md:w-48">
+                  <Select
+                    options={[
+                      { value: 'all', label: 'Todas las categorías' },
+                      { value: 'general', label: 'General' },
+                      { value: 'descuentos', label: 'Descuentos' },
+                      { value: 'productos', label: 'Productos' },
+                    ]}
+                    value={rewardCategoryFilter}
+                    onChange={(val) => setRewardCategoryFilter(val)}
+                  />
+                </div>
+                <div className="w-full md:w-48">
+                  <Select
+                    options={[
+                      { value: 'points', label: 'Ordenar por puntos' },
+                      { value: 'date', label: 'Ordenar por fecha' },
+                    ]}
+                    value={rewardSortBy}
+                    onChange={(val) => setRewardSortBy(val as any)}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Rewards List */}
+          {rewardsLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(() => {
+                let filtered = rewards.filter(reward => {
+                  const matchesSearch = reward.title.toLowerCase().includes(rewardSearchTerm.toLowerCase()) ||
+                                       reward.description?.toLowerCase().includes(rewardSearchTerm.toLowerCase());
+                  const matchesCategory = rewardCategoryFilter === 'all' || reward.category === rewardCategoryFilter;
+                  return matchesSearch && matchesCategory;
+                });
+
+                if (rewardSortBy === 'points') {
+                  filtered = [...filtered].sort((a, b) => a.pointsRequired - b.pointsRequired);
+                } else {
+                  filtered = [...filtered].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                }
+
+                return filtered.length > 0 ? (
+                  filtered.map(reward => (
+                    <Card key={reward.id} className="relative group hover:border-brand-orange/50 transition-all hover:-translate-y-1 bg-[#2C2C2C] border-white/5 overflow-hidden">
+                      <div className={`absolute top-0 left-0 w-1 h-full ${reward.isActive ? 'bg-green-500' : 'bg-gray-500'} group-hover:bg-brand-orange transition-colors`} />
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="text-4xl bg-white/5 p-3 rounded-2xl shadow-inner">
+                            {reward.icon || reward.iconName || '🎁'}
+                          </div>
+                          <div className="flex flex-col items-end gap-2">
+                            <Badge variant={reward.isActive ? 'success' : 'default'} className="text-[10px] px-2 py-0.5 uppercase tracking-wider">
+                              {reward.isActive ? 'Activa' : 'Inactiva'}
+                            </Badge>
+                            <button 
+                              onClick={() => handleDeleteReward(reward.id)}
+                              className="text-gray-600 hover:text-red-500 transition-colors p-1"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <h3 className="font-bold text-white text-xl mb-2">{reward.title}</h3>
+                        <p className="text-sm text-text-secondary mb-4 min-h-[40px]">{reward.description || 'Sin descripción'}</p>
+                        
+                        {reward.category && (
+                          <Badge className="mb-4 bg-blue-500/20 text-blue-400">
+                            {reward.category}
+                          </Badge>
+                        )}
+                        
+                        <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                          <div className="flex items-center gap-1 bg-brand-orange/10 px-3 py-1.5 rounded-lg border border-brand-orange/20">
+                            <Star size={14} className="text-brand-orange" fill="currentColor"/>
+                            <span className="text-sm font-bold text-brand-orange">{reward.pointsRequired} pts</span>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleEditReward(reward)}
+                            className="text-white hover:text-brand-orange"
+                          >
+                            <Edit2 className="w-4 h-4 mr-1" />
+                            Editar
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-full">
+                    <Card className="bg-[#2C2C2C] border-white/5">
+                      <CardContent className="p-12 text-center">
+                        <Gift className="w-12 h-12 text-gray-500 mx-auto mb-4" />
+                        <p className="text-gray-400 mb-4">No se encontraron recompensas</p>
+                        <Button onClick={handleCreateNewReward} variant="outline">
+                          Crear Primera Recompensa
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </TabsContent>
+
         {/* --- Reglas Tab --- */}
         <TabsContent value="rules">
             <RulesConfig />
         </TabsContent>
       </Tabs>
+
+      {/* Create/Edit Reward Modal */}
+      <Modal isOpen={isRewardModalOpen} onClose={() => { setIsRewardModalOpen(false); setEditingReward(null); }}>
+        <div className="w-[600px] max-w-[95vw] bg-[#1E1E1E]">
+          <ModalHeader className="border-b border-white/5 bg-[#2C2C2C] py-4">
+            <span className="font-display text-xl">{editingReward?.id ? 'Editar Recompensa' : 'Crear Nueva Recompensa'}</span>
+          </ModalHeader>
+          <ModalBody className="p-6">
+            {editingReward && (
+              <div className="space-y-6">
+                <Input
+                  label="Título de la Recompensa *"
+                  value={editingReward.title}
+                  onChange={(e) => setEditingReward({ ...editingReward, title: e.target.value })}
+                  placeholder="Ej. Descuento 10%"
+                  className="bg-[#1A1A1A]"
+                />
+                <div>
+                  <label className="block text-sm font-medium text-text-secondary mb-2">Descripción</label>
+                  <textarea
+                    value={editingReward.description || ''}
+                    onChange={(e) => setEditingReward({ ...editingReward, description: e.target.value })}
+                    placeholder="Describe la recompensa..."
+                    rows={3}
+                    className="w-full px-4 py-2 bg-[#1A1A1A] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-orange/50"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Puntos Requeridos *"
+                    type="number"
+                    value={editingReward.pointsRequired?.toString() || '0'}
+                    onChange={(e) => setEditingReward({ ...editingReward, pointsRequired: parseInt(e.target.value) || 0 })}
+                    className="bg-[#1A1A1A]"
+                  />
+                  <Select
+                    label="Categoría"
+                    options={[
+                      { value: 'general', label: 'General' },
+                      { value: 'descuentos', label: 'Descuentos' },
+                      { value: 'productos', label: 'Productos' },
+                    ]}
+                    value={editingReward.category || 'general'}
+                    onChange={(val) => setEditingReward({ ...editingReward, category: val })}
+                  />
+                </div>
+                <Input
+                  label="Icono (emoji o nombre)"
+                  value={editingReward.icon || editingReward.iconName || ''}
+                  onChange={(e) => setEditingReward({ ...editingReward, icon: e.target.value, iconName: e.target.value })}
+                  placeholder="🎁 o gift"
+                  className="bg-[#1A1A1A]"
+                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={editingReward.isActive}
+                    onChange={(e) => setEditingReward({ ...editingReward, isActive: e.target.checked })}
+                    className="w-4 h-4 rounded border-white/20 bg-[#252525] text-brand-orange focus:ring-brand-orange"
+                  />
+                  <label className="text-gray-300">Recompensa Activa</label>
+                </div>
+              </div>
+            )}
+          </ModalBody>
+          <ModalFooter className="border-t border-white/5 bg-[#2C2C2C] py-4">
+            <Button variant="ghost" onClick={() => { setIsRewardModalOpen(false); setEditingReward(null); }}>Cancelar</Button>
+            <Button onClick={handleSaveReward} className="bg-brand-orange hover:bg-brand-orange/90 text-white">Guardar Recompensa</Button>
+          </ModalFooter>
+        </div>
+      </Modal>
 
       {/* Create Challenge Modal */}
       <Modal isOpen={isChallengeModalOpen} onClose={() => setIsChallengeModalOpen(false)}>
@@ -638,6 +934,3 @@ export default function GamificationDashboard() {
     </div>
   );
 }
-
-// Helper icon import
-import { Edit2, Check } from 'lucide-react';
