@@ -248,6 +248,8 @@ export interface Product {
     /** Type of featured promotion (e.g., "beer_of_month", "featured", "highlighted") */
     featuredType?: string;
   };
+  /** ID of the associated brand character (optional) */
+  characterId?: string;
 }
 
 /**

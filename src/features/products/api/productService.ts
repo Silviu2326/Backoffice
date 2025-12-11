@@ -24,6 +24,7 @@ export interface SupabaseProduct {
     featuredType?: string;
     badge?: string;
   };
+  character_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -51,6 +52,7 @@ function mapSupabaseToProduct(supabaseProduct: SupabaseProduct): Product {
       featuredEndDate: supabaseProduct.featured_config.featuredEndDate,
       featuredType: supabaseProduct.featured_config.featuredType,
     } : undefined,
+    characterId: supabaseProduct.character_id,
   };
 }
 
@@ -76,6 +78,7 @@ function mapProductToSupabase(product: Partial<Product>): Partial<SupabaseProduc
       featuredEndDate: product.featuredConfig.featuredEndDate,
       featuredType: product.featuredConfig.featuredType,
     } : null,
+    character_id: product.characterId,
   };
 }
 

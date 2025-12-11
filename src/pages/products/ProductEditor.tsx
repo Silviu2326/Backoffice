@@ -5,12 +5,14 @@ import Button from '../../components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
 import { MediaTab } from '../../components/products/tabs/MediaTab';
 import { FeaturedProductTab } from '../../components/products/tabs/FeaturedProductTab';
 import { VariantsTab } from '../../components/products/tabs/VariantsTab';
 import { getProductById, updateProduct, updateFeaturedConfig } from '../../features/products/api/productService';
 import { getProductVariants, createVariants, updateVariant } from '../../features/products/api/productVariantService';
-import { Product, ProductStatus, InventoryType } from '../../types/core';
+import { getCharacters } from '../../features/brand/api/characterService';
+import { Product, ProductStatus, InventoryType, Character } from '../../types/core';
 
 const ProductEditor: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -18,10 +20,11 @@ const ProductEditor: React.FC = () => {
   const productId = searchParams.get('id');
   
   const [product, setProduct] = useState<Product | null>(null);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -34,6 +37,7 @@ const ProductEditor: React.FC = () => {
     inventoryType: 'SINGLE' as InventoryType,
     tags: [] as string[],
     images: [] as string[],
+    characterId: '',
   });
 
   const [stock, setStock] = useState<number>(0);
@@ -44,6 +48,20 @@ const ProductEditor: React.FC = () => {
     featuredEndDate: '',
     featuredType: 'beer_of_month',
   });
+
+  // Cargar personajes desde Supabase al inicio
+  useEffect(() => {
+    const loadCharacters = async () => {
+      try {
+        const fetchedCharacters = await getCharacters({ isActive: true });
+        setCharacters(fetchedCharacters);
+      } catch (err) {
+        console.error('Error loading characters:', err);
+      }
+    };
+
+    loadCharacters();
+  }, []);
 
   // Cargar producto desde Supabase
   useEffect(() => {
@@ -76,6 +94,7 @@ const ProductEditor: React.FC = () => {
           inventoryType: fetchedProduct.inventoryType,
           tags: fetchedProduct.tags,
           images: fetchedProduct.images,
+          characterId: fetchedProduct.characterId || '',
         });
 
         if (fetchedProduct.featuredConfig) {
@@ -126,6 +145,7 @@ const ProductEditor: React.FC = () => {
         inventoryType: formData.inventoryType,
         tags: formData.tags,
         images: formData.images,
+        characterId: formData.characterId || undefined,
       };
 
       await updateProduct(productId, updates);
@@ -267,15 +287,81 @@ const ProductEditor: React.FC = () => {
                 </div>
                 <div>
                   <label htmlFor="productPrice" className="block text-sm font-medium text-text-secondary mb-2">Precio Base (€)</label>
-                  <Input 
-                    id="productPrice" 
-                    type="number" 
+                  <Input
+                    id="productPrice"
+                    type="number"
                     step="0.01"
-                    placeholder="0.00" 
+                    placeholder="0.00"
                     value={formData.basePrice}
                     onChange={(e) => setFormData({ ...formData, basePrice: e.target.value })}
-                    className="mt-1 block w-full" 
+                    className="mt-1 block w-full"
                   />
+                </div>
+                <div>
+                  <label htmlFor="productCategory" className="block text-sm font-medium text-text-secondary mb-2">Categoría</label>
+                  <Input
+                    id="productCategory"
+                    type="text"
+                    placeholder="Categoría"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    className="mt-1 block w-full"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="productStatus" className="block text-sm font-medium text-text-secondary mb-2">Estado</label>
+                  <select
+                    id="productStatus"
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value as ProductStatus })}
+                    className="mt-1 block w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent"
+                  >
+                    <option value="DRAFT">Borrador</option>
+                    <option value="PUBLISHED">Publicado</option>
+                    <option value="ARCHIVED">Archivado</option>
+                  </select>
+                </div>
+                <div className="col-span-2">
+                  <label htmlFor="productCharacter" className="block text-sm font-medium text-text-secondary mb-2">Personaje Relacionado</label>
+                  <Select
+                    options={[
+                      { value: '', label: 'Sin personaje (opcional)' },
+                      ...characters.map((character: Character) => ({
+                        value: character.id,
+                        label: character.name,
+                      })),
+                    ]}
+                    value={formData.characterId}
+                    onChange={(value) => setFormData({ ...formData, characterId: value })}
+                    placeholder="Seleccionar personaje"
+                  />
+                  {formData.characterId && (
+                    <div className="mt-3 p-3 bg-[#2C2C2C] rounded-lg border border-white/10">
+                      <div className="flex items-center gap-3">
+                        {(() => {
+                          const selectedCharacter = characters.find(
+                            (c: Character) => c.id === formData.characterId
+                          );
+                          return selectedCharacter ? (
+                            <>
+                              <div
+                                className="w-8 h-8 rounded-full border-2 border-white/20 flex-shrink-0"
+                                style={{ backgroundColor: selectedCharacter.accentColor || selectedCharacter.color }}
+                              />
+                              <div>
+                                <p className="text-sm font-medium text-white">
+                                  {selectedCharacter.name}
+                                </p>
+                                <p className="text-xs text-text-secondary">
+                                  {selectedCharacter.role}
+                                </p>
+                              </div>
+                            </>
+                          ) : null;
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="col-span-2">
                   <label htmlFor="productDescription" className="block text-sm font-medium text-text-secondary mb-2">Descripción</label>

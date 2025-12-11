@@ -1,15 +1,14 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  LayoutGrid, 
-  List as ListIcon, 
-  Plus, 
-  Search, 
+import {
+  LayoutGrid,
+  List as ListIcon,
+  Plus,
+  Search,
   Eye,
   Star,
   Loader2
 } from 'lucide-react';
-import { MOCK_CHARACTERS } from '../../data/mockFactory';
 import { Product, Character, ProductStatus, InventoryType } from '../../types/core';
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -24,12 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table/Table';
-import { 
-  getProducts, 
-  createProduct, 
-  updateFeaturedConfig 
+import {
+  getProducts,
+  createProduct,
+  updateFeaturedConfig
 } from '../../features/products/api/productService';
 import { getProductTotalStock } from '../../features/products/api/productVariantService';
+import { getCharacters } from '../../features/brand/api/characterService';
 
 // Simulated stock status since it's not on the main Product type (it's on Variants)
 type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
@@ -37,12 +37,12 @@ type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
 interface ProductWithStock extends Product {
   stockLevel: number;
   stockStatus: StockStatus;
-  characterId?: string; // ID del personaje relacionado
 }
 
 const ProductList = () => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductWithStock[]>([]);
+  const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -65,6 +65,20 @@ const ProductList = () => {
     tags: [] as string[],
     characterId: '',
   });
+
+  // Cargar personajes desde Supabase al inicio
+  useEffect(() => {
+    const loadCharacters = async () => {
+      try {
+        const fetchedCharacters = await getCharacters({ isActive: true });
+        setCharacters(fetchedCharacters);
+      } catch (err) {
+        console.error('Error loading characters:', err);
+      }
+    };
+
+    loadCharacters();
+  }, []);
 
   // Cargar productos desde Supabase con debounce para búsqueda
   useEffect(() => {
@@ -173,6 +187,7 @@ const ProductList = () => {
         images: ['https://via.placeholder.com/150'],
         tags: newProduct.tags,
         inventoryType: InventoryType.SINGLE,
+        characterId: newProduct.characterId || undefined,
       };
 
       const createdProduct = await createProduct(productData);
@@ -433,11 +448,11 @@ const ProductList = () => {
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-white">{product.name}</span>
                         {product.characterId && (() => {
-                          const character = MOCK_CHARACTERS.find((c: Character) => c.id === product.characterId);
+                          const character = characters.find((c: Character) => c.id === product.characterId);
                           return character ? (
                             <span
                               className="w-3 h-3 rounded-full border border-white/20 flex-shrink-0"
-                              style={{ backgroundColor: character.color }}
+                              style={{ backgroundColor: character.accentColor || character.color }}
                               title={character.name}
                             />
                           ) : null;
@@ -668,7 +683,7 @@ const ProductList = () => {
                 <Select
                   options={[
                     { value: '', label: 'Sin personaje (opcional)' },
-                    ...MOCK_CHARACTERS.map((character: Character) => ({
+                    ...characters.map((character: Character) => ({
                       value: character.id,
                       label: character.name,
                     })),
@@ -684,14 +699,14 @@ const ProductList = () => {
                   <div className="mt-3 p-3 bg-[#2C2C2C] rounded-lg border border-white/10">
                     <div className="flex items-center gap-3">
                       {(() => {
-                        const selectedCharacter = MOCK_CHARACTERS.find(
+                        const selectedCharacter = characters.find(
                           (c: Character) => c.id === newProduct.characterId
                         );
                         return selectedCharacter ? (
                           <>
                             <div
                               className="w-8 h-8 rounded-full border-2 border-white/20 flex-shrink-0"
-                              style={{ backgroundColor: selectedCharacter.color }}
+                              style={{ backgroundColor: selectedCharacter.accentColor || selectedCharacter.color }}
                             />
                             <div>
                               <p className="text-sm font-medium text-white">
