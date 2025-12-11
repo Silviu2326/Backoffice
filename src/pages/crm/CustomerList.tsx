@@ -20,6 +20,10 @@ interface Customer {
   createdAt: string;
   status: 'active' | 'inactive' | 'lead';
   avatar: string;
+  city?: string;
+  fullAddress?: string;
+  language?: string;
+  pointsBalance?: number;
 }
 
 const customerColumns: Column<Customer>[] = [
@@ -124,8 +128,8 @@ export const CustomerList: React.FC = () => {
       header: 'Cliente',
       accessorKey: 'name',
       render: (row: Customer) => {
-        const avatarName = row.avatar 
-          ? AVAILABLE_AVATARS.find(a => a.path === row.avatar)?.name || 'Sin avatar'
+        const avatarName = row.avatar
+          ? AVAILABLE_AVATARS.find(a => a.path === row.avatar)?.name || row.avatar
           : 'Sin avatar';
         return (
           <div className="flex flex-col">
@@ -133,6 +137,9 @@ export const CustomerList: React.FC = () => {
               {row.name}
             </Link>
             <span className="text-xs text-text-secondary">{avatarName}</span>
+            {row.city && (
+              <span className="text-xs text-text-muted">{row.city}</span>
+            )}
           </div>
         );
       },
@@ -140,10 +147,28 @@ export const CustomerList: React.FC = () => {
     {
       header: 'Email',
       accessorKey: 'email',
+      render: (row: Customer) => (
+        <div className="flex flex-col">
+          <span className="text-white">{row.email}</span>
+          {row.language && (
+            <span className="text-xs text-text-muted">
+              {row.language === 'es' ? '🇪🇸 Español' : '🇬🇧 English'}
+            </span>
+          )}
+        </div>
+      ),
     },
     {
       header: 'Teléfono',
       accessorKey: 'phone',
+    },
+    {
+      header: 'Puntos',
+      render: (row: Customer) => (
+        <span className="text-brand-orange font-semibold">
+          {row.pointsBalance || 0} pts
+        </span>
+      ),
     },
     {
       header: 'Creado en',
@@ -171,9 +196,9 @@ export const CustomerList: React.FC = () => {
               Ver
             </Button>
           </Link>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="text-red-500 hover:text-red-700 hover:bg-red-50"
             onClick={() => handleDeleteCustomer(row.id)}
           >
@@ -216,15 +241,19 @@ export const CustomerList: React.FC = () => {
           customersData.map(async (customer) => {
             // Obtener pedidos para calcular estadísticas (si se necesita en el futuro)
             // const orders = await getAllOrders({ customerId: customer.id });
-            
+
             return {
               id: customer.id,
               name: customer.fullName,
               email: customer.email,
-              phone: customer.phone || '', 
+              phone: customer.phone || '',
               createdAt: customer.createdAt.toISOString(),
               status: customer.status === 'ACTIVE' ? 'active' : 'inactive' as 'active' | 'inactive' | 'lead',
-              avatar: customer.avatarUrl || '',
+              avatar: customer.avatar || customer.avatarUrl || '',
+              city: customer.city,
+              fullAddress: customer.fullAddress,
+              language: customer.language,
+              pointsBalance: customer.pointsBalance,
             } as Customer;
           })
         );
@@ -273,7 +302,11 @@ export const CustomerList: React.FC = () => {
         phone: newCustomer.phone,
         createdAt: new Date().toISOString(),
         status: created.status === 'ACTIVE' ? 'active' : 'inactive' as 'active' | 'inactive' | 'lead',
-        avatar: created.avatarUrl || '',
+        avatar: created.avatar || created.avatarUrl || '',
+        city: created.city,
+        fullAddress: created.fullAddress,
+        language: created.language,
+        pointsBalance: created.pointsBalance,
       };
 
       // Actualizar la lista localmente

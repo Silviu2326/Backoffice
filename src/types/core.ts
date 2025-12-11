@@ -56,6 +56,7 @@ export enum InventoryType {
  * The current state of an order in the fulfillment pipeline.
  */
 export enum OrderStatus {
+  // Estados tradicionales del backoffice
   PENDING_PAYMENT = 'PENDING_PAYMENT',
   PAID = 'PAID',
   PREPARING = 'PREPARING',
@@ -64,6 +65,13 @@ export enum OrderStatus {
   DELIVERED = 'DELIVERED',
   RETURNED = 'RETURNED',
   CANCELLED = 'CANCELLED',
+
+  // Estados de Stripe/Supabase (minúsculas)
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED_LOWERCASE = 'cancelled',
 }
 
 /**
@@ -177,6 +185,28 @@ export interface Customer extends User {
   segment: CustomerSegment;
   /** List of saved shipping/billing addresses */
   addresses: Address[];
+  /** First name */
+  firstName?: string;
+  /** Last name */
+  lastName?: string;
+  /** City */
+  city?: string;
+  /** Avatar character name (e.g., 'buck', 'candela') */
+  avatar?: string;
+  /** Address label */
+  addressLabel?: string;
+  /** Street name */
+  street?: string;
+  /** Street number */
+  number?: string;
+  /** Floor/apartment */
+  floor?: string;
+  /** Postal code */
+  postalCode?: string;
+  /** Full address combined */
+  fullAddress?: string;
+  /** Preferred language (es, en) */
+  language?: string;
 }
 
 /**
@@ -286,6 +316,12 @@ export interface Order {
   customerEmail?: string;
   /** Total order amount */
   totalAmount: number;
+  /** Subtotal before shipping and discounts */
+  subtotal?: number;
+  /** Shipping cost */
+  shippingCost?: number;
+  /** Discount amount */
+  discount?: number;
   /** Current order status */
   status: OrderStatus;
   /** List of items included in the order */
@@ -294,6 +330,18 @@ export interface Order {
   shippingAddress: Address;
   /** Billing address */
   billingAddress: Address;
+  /** Stripe Payment Intent ID */
+  stripePaymentIntentId?: string;
+  /** Stripe payment status */
+  stripePaymentStatus?: string;
+  /** Shipping method (home, pickup) */
+  shippingMethod?: string;
+  /** Cart data (JSONB from Supabase) */
+  cart?: any;
+  /** Additional metadata */
+  metadata?: Record<string, unknown>;
+  /** When the payment was completed */
+  paidAt?: Date;
   /** Creation timestamp */
   createdAt: Date;
   /** Last update timestamp */

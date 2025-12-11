@@ -147,6 +147,17 @@ const CustomerDetail: React.FC = () => {
     email: customer.email,
     avatarUrl: customer.avatarUrl || '',
     segments: [customer.segment],
+    phone: customer.phone,
+    firstName: customer.firstName,
+    lastName: customer.lastName,
+    city: customer.city,
+    avatar: customer.avatar,
+    street: customer.street,
+    number: customer.number,
+    floor: customer.floor,
+    postalCode: customer.postalCode,
+    fullAddress: customer.fullAddress,
+    language: customer.language,
   };
 
   return (

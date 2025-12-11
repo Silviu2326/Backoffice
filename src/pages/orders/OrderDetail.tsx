@@ -23,7 +23,7 @@ import { Card } from '../../components/ui/Card';
 import { Badge } from '../../components/ui/Badge';
 import Avatar from '../../components/ui/Avatar';
 import { Input } from '../../components/ui/Input';
-import { formatDate } from '../../utils/formatters';
+import { formatDate, formatCurrency } from '../../utils/formatters';
 
 // --- Mock Components for this Page ---
 
@@ -312,18 +312,113 @@ const OrderDetail = () => {
               {/* Shipping Info */}
               <ShippingInfo address={order.shippingAddress} orderStatus={order.status} />
               
-              {/* Payment Info (Bonus/Optional) */}
+              {/* Payment Info - Stripe */}
               <Card className="p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4">Pago</h3>
-                  <div className="flex justify-between items-center p-3 bg-white/5 rounded border border-white/10">
+                  <h3 className="text-lg font-semibold text-white mb-4">Información de Pago</h3>
+
+                  {/* Stripe Payment Status */}
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center p-3 bg-white/5 rounded border border-white/10">
                        <div className="flex items-center gap-3">
                            <CreditCard className="text-brand-orange" />
                            <div>
-                               <p className="font-medium text-white">Visa •••• 4242</p>
-                               <p className="text-xs text-text-muted">Expira 12/28</p>
+                               <p className="font-medium text-white">
+                                 {order.stripePaymentIntentId ? 'Pago con Stripe' : 'Método de Pago'}
+                               </p>
+                               <p className="text-xs text-text-muted">
+                                 {order.paidAt ? formatDate(order.paidAt, 'long') : 'Pendiente'}
+                               </p>
                            </div>
                        </div>
-                       <Badge variant="success">Pagado</Badge>
+                       {order.stripePaymentStatus === 'succeeded' ? (
+                         <Badge variant="success">Pagado</Badge>
+                       ) : order.stripePaymentStatus === 'processing' ? (
+                         <Badge variant="brand">Procesando</Badge>
+                       ) : order.stripePaymentStatus ? (
+                         <Badge variant="warning">{order.stripePaymentStatus}</Badge>
+                       ) : (
+                         <Badge variant="warning">Sin Pago</Badge>
+                       )}
+                    </div>
+
+                    {/* Stripe Details */}
+                    {order.stripePaymentIntentId && (
+                      <div className="space-y-3 pt-4 border-t border-white/10">
+                        <div>
+                          <p className="text-xs text-text-muted mb-1">Payment Intent ID</p>
+                          <p className="text-sm font-mono text-white bg-white/5 p-2 rounded border border-white/10 break-all">
+                            {order.stripePaymentIntentId}
+                          </p>
+                        </div>
+
+                        {order.stripePaymentStatus && (
+                          <div>
+                            <p className="text-xs text-text-muted mb-1">Estado en Stripe</p>
+                            <p className="text-sm text-white capitalize">
+                              {order.stripePaymentStatus.replace(/_/g, ' ')}
+                            </p>
+                          </div>
+                        )}
+
+                        {order.paidAt && (
+                          <div>
+                            <p className="text-xs text-text-muted mb-1">Fecha de Pago</p>
+                            <p className="text-sm text-white">
+                              {formatDate(order.paidAt, 'full')}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Link to Stripe Dashboard */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => window.open(`https://dashboard.stripe.com/payments/${order.stripePaymentIntentId}`, '_blank')}
+                        >
+                          <ExternalLink size={14} className="mr-2" />
+                          Ver en Stripe Dashboard
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Order Financial Summary */}
+                    <div className="pt-4 border-t border-white/10 space-y-2">
+                      {order.subtotal !== undefined && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-text-muted">Subtotal:</span>
+                          <span className="text-white font-medium">{formatCurrency(order.subtotal)}</span>
+                        </div>
+                      )}
+                      {order.shippingCost !== undefined && order.shippingCost > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-text-muted">Envío:</span>
+                          <span className="text-white font-medium">{formatCurrency(order.shippingCost)}</span>
+                        </div>
+                      )}
+                      {order.discount !== undefined && order.discount > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-text-muted">Descuento:</span>
+                          <span className="text-green-400 font-medium">-{formatCurrency(order.discount)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-base pt-2 border-t border-white/10">
+                        <span className="text-white font-semibold">Total:</span>
+                        <span className="text-brand-orange font-bold">{formatCurrency(order.totalAmount)}</span>
+                      </div>
+                    </div>
+
+                    {/* Metadata */}
+                    {order.metadata && Object.keys(order.metadata).length > 0 && (
+                      <div className="pt-4 border-t border-white/10">
+                        <p className="text-xs text-text-muted mb-2">Información Adicional</p>
+                        <div className="bg-white/5 p-3 rounded border border-white/10">
+                          <pre className="text-xs text-text-secondary overflow-x-auto">
+                            {JSON.stringify(order.metadata, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
                   </div>
               </Card>
           </div>

@@ -41,13 +41,17 @@ const OrderList = () => {
 
   const loadOrders = async () => {
     try {
+      console.log('🚀 [OrderList] Iniciando carga de órdenes...');
       setIsLoading(true);
       const allOrders = await getAllOrders();
+      console.log('✅ [OrderList] Órdenes recibidas:', allOrders.length, allOrders);
       setOrders(allOrders);
+      console.log('📊 [OrderList] Estado actualizado con órdenes:', allOrders);
     } catch (error) {
-      console.error('Error loading orders:', error);
+      console.error('❌ [OrderList] Error loading orders:', error);
     } finally {
       setIsLoading(false);
+      console.log('✅ [OrderList] Carga finalizada, isLoading = false');
     }
   };
 
@@ -95,20 +99,25 @@ const OrderList = () => {
   const getStatusBadge = (status: OrderStatus) => {
     switch (status) {
       case OrderStatus.PENDING_PAYMENT:
+      case OrderStatus.PENDING:
         return <Badge variant="warning" dot>Pendiente Pago</Badge>;
       case OrderStatus.PAID:
         return <Badge variant="success" dot>Pagado</Badge>;
       case OrderStatus.PREPARING:
+      case OrderStatus.PROCESSING:
         return <Badge variant="brand" dot>Preparando</Badge>;
       case OrderStatus.READY_TO_SHIP:
         return <Badge variant="brand" dot>Listo para Enviar</Badge>;
       case OrderStatus.SHIPPED:
         return <Badge variant="brand" dot>Enviado</Badge>;
       case OrderStatus.DELIVERED:
+      case OrderStatus.COMPLETED:
         return <Badge variant="success" dot>Entregado</Badge>;
       case OrderStatus.RETURNED:
         return <Badge variant="danger" dot>Devuelto</Badge>;
       case OrderStatus.CANCELLED:
+      case OrderStatus.CANCELLED_LOWERCASE:
+      case OrderStatus.FAILED:
         return <Badge variant="danger" dot>Cancelado</Badge>;
       default:
         return <Badge variant="default">{status}</Badge>;
@@ -121,45 +130,86 @@ const OrderList = () => {
   };
 
   const filteredOrders = useMemo(() => {
+    console.log('🔍 [OrderList] Filtrando órdenes...', { activeTab, totalOrders: orders.length });
+    console.log('📦 [OrderList] Órdenes originales:', orders);
+
     let filtered = orders;
 
     switch (activeTab) {
       case 'pendientes':
-        filtered = orders.filter((order) =>
-          [OrderStatus.PENDING_PAYMENT, OrderStatus.PAID].includes(order.status)
-        );
+        filtered = orders.filter((order) => {
+          const matches = [OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.PENDING].includes(order.status);
+          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches pendientes=${matches}`);
+          return matches;
+        });
         break;
       case 'proceso':
-        filtered = orders.filter((order) =>
-          [
+        filtered = orders.filter((order) => {
+          const matches = [
             OrderStatus.PREPARING,
             OrderStatus.READY_TO_SHIP,
             OrderStatus.SHIPPED,
-          ].includes(order.status)
-        );
+            OrderStatus.PROCESSING,
+          ].includes(order.status);
+          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches proceso=${matches}`);
+          return matches;
+        });
         break;
       case 'completados':
-        filtered = orders.filter((order) =>
-          order.status === OrderStatus.DELIVERED
-        );
+        filtered = orders.filter((order) => {
+          const matches = order.status === OrderStatus.DELIVERED || order.status === OrderStatus.COMPLETED;
+          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches completados=${matches}`);
+          return matches;
+        });
         break;
       case 'incidencias':
-        filtered = orders.filter((order) =>
-          [OrderStatus.RETURNED, OrderStatus.CANCELLED].includes(order.status)
-        );
+        filtered = orders.filter((order) => {
+          const matches = [OrderStatus.RETURNED, OrderStatus.CANCELLED, OrderStatus.CANCELLED_LOWERCASE, OrderStatus.FAILED].includes(order.status);
+          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches incidencias=${matches}`);
+          return matches;
+        });
         break;
       default:
+        console.log('  - Tab "todos": mostrando todas las órdenes');
         break;
     }
-    
+
+    console.log('✅ [OrderList] Órdenes filtradas:', filtered.length, filtered);
+
     // Sort by date descending
-    return filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const sorted = filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    console.log('✅ [OrderList] Órdenes ordenadas:', sorted.length);
+
+    return sorted;
   }, [activeTab, orders]);
 
   const paginatedOrders = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return filteredOrders.slice(start, start + pageSize);
+    const paginated = filteredOrders.slice(start, start + pageSize);
+    console.log('📄 [OrderList] Órdenes paginadas:', { page, pageSize, start, total: filteredOrders.length, showing: paginated.length }, paginated);
+    return paginated;
   }, [filteredOrders, page]);
+
+  const getPaymentStatusBadge = (stripePaymentStatus?: string) => {
+    if (!stripePaymentStatus) {
+      return <Badge variant="warning">Sin Pago</Badge>;
+    }
+
+    switch (stripePaymentStatus) {
+      case 'succeeded':
+        return <Badge variant="success" dot>Pagado</Badge>;
+      case 'processing':
+        return <Badge variant="brand" dot>Procesando</Badge>;
+      case 'requires_payment_method':
+      case 'requires_confirmation':
+      case 'requires_action':
+        return <Badge variant="warning" dot>Requiere Acción</Badge>;
+      case 'canceled':
+        return <Badge variant="danger" dot>Cancelado</Badge>;
+      default:
+        return <Badge variant="default">{stripePaymentStatus}</Badge>;
+    }
+  };
 
   const columns: Column<Order>[] = [
     {
@@ -170,9 +220,14 @@ const OrderList = () => {
     {
       header: 'Cliente',
       render: (order) => (
-        <span className="text-text-secondary">
-          {getCustomerName(order.customerId)}
-        </span>
+        <div className="flex flex-col">
+          <span className="text-text-secondary">
+            {getCustomerName(order.customerId)}
+          </span>
+          {order.customerEmail && (
+            <span className="text-xs text-text-muted">{order.customerEmail}</span>
+          )}
+        </div>
       ),
     },
     {
@@ -196,15 +251,24 @@ const OrderList = () => {
       render: (order) => getStatusBadge(order.status),
     },
     {
+      header: 'Pago Stripe',
+      render: (order) => getPaymentStatusBadge(order.stripePaymentStatus),
+    },
+    {
       header: 'Método Envío',
-      render: () => <span className="text-text-secondary">Estándar</span>,
+      render: (order) => (
+        <span className="text-text-secondary">
+          {order.shippingMethod === 'home' ? 'A Domicilio' :
+           order.shippingMethod === 'pickup' ? 'Recogida' : 'Estándar'}
+        </span>
+      ),
     },
     {
       header: 'Acción',
       render: (order) => (
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="h-8 w-8 p-0"
           onClick={() => {
             setSelectedOrder(order);
