@@ -8,7 +8,7 @@ export interface SupabaseStore {
   name: string;
   address: string;
   city: string;
-  phone: string;
+  phone?: string;
   distance_km?: number;
   rating?: number;
   reviews_count?: number;
@@ -27,7 +27,7 @@ export interface Store {
   name: string;
   address: string;
   city: string;
-  phone: string;
+  phone?: string;
   distanceKm?: number;
   rating?: number;
   reviewsCount?: number;

@@ -70,8 +70,8 @@ const StoreList: React.FC = () => {
   const cities = Array.from(new Set(stores.map(s => s.city))).sort();
 
   const handleCreateStore = async () => {
-    if (!newStore.name || !newStore.address || !newStore.city || !newStore.phone) {
-      alert('Por favor completa los campos obligatorios: Nombre, Dirección, Ciudad y Teléfono');
+    if (!newStore.name || !newStore.address || !newStore.city) {
+      alert('Por favor completa los campos obligatorios: Nombre, Dirección y Ciudad');
       return;
     }
 
@@ -233,7 +233,7 @@ const StoreList: React.FC = () => {
               onChange={(e) => setNewStore({ ...newStore, city: e.target.value })}
             />
             <Input
-              label="Teléfono *"
+              label="Teléfono"
               placeholder="+34 600 123 456"
               value={newStore.phone}
               onChange={(e) => setNewStore({ ...newStore, phone: e.target.value })}

@@ -361,7 +361,7 @@ export interface Store {
   /** Geolocation coordinates */
   coordinates: Coordinates;
   /** Contact phone number */
-  phone: string;
+  phone?: string;
   /** Whether the store is currently active/open for business logic */
   isActive: boolean;
   /** Weekly opening hours configuration */
