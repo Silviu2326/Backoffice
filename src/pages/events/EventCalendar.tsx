@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus, Loader2, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Drawer from '../../components/ui/Drawer';
 import Button from '../../components/ui/Button';
@@ -9,7 +9,7 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Event } from '../../types/core';
-import { getAllEvents, createEvent } from '../../features/events/api/eventService';
+import { getAllEvents, createEvent, deleteEvent } from '../../features/events/api/eventService';
 
 // Map category to colors
 const EVENT_COLORS: Record<string, string> = {
@@ -145,6 +145,24 @@ const EventCalendar = () => {
       alert('Error al crear el evento. Por favor, intenta de nuevo.');
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que deseas eliminar el evento "${eventTitle}"? Esta acción no se puede deshacer.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await deleteEvent(eventId);
+      // Update local state by removing the deleted event
+      setEvents(prevEvents => prevEvents.filter(e => e.id !== eventId));
+      alert('Evento eliminado correctamente');
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert('Error al eliminar el evento. Por favor, intenta de nuevo.');
     }
   };
 
@@ -308,14 +326,22 @@ const EventCalendar = () => {
                                 </div>
                             </div>
                             
-                            <div className="pt-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full"
+                            <div className="pt-2 flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
                                   onClick={() => navigate(`/admin/events/${event.id}`)}
                                 >
                                     Ver Detalles
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteEvent(event.id, event.title)}
+                                  className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                                >
+                                    <Trash2 className="w-4 h-4" />
                                 </Button>
                             </div>
                         </CardContent>

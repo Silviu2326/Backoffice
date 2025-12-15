@@ -22,6 +22,7 @@ import { RulesConfig } from '../pages/loyalty/RulesConfig';
 import GamificationDashboard from '../pages/loyalty/GamificationDashboard';
 import QuizManager from '../pages/gamification/QuizManager';
 import ServiceManager from '../pages/retail/ServiceManager';
+import NavigationManager from '../pages/settings/NavigationManager';
 
 export interface RouteConfig {
   path: string;
@@ -54,4 +55,5 @@ export const routes: RouteConfig[] = [
   { path: '/admin/moderation', component: ReviewInbox, title: 'Moderación' },
   { path: '/admin/settings', component: GlobalSettings, title: 'Configuración' },
   { path: '/admin/settings/audit', component: AuditLogViewer, title: 'Auditoría' },
+  { path: '/admin/settings/navigation', component: NavigationManager, title: 'Navegación de la App' },
 ];

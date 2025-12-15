@@ -14,7 +14,8 @@ import {
   ShieldAlert,
   Settings,
   LogOut,
-  HelpCircle
+  HelpCircle,
+  Menu
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -54,6 +55,7 @@ const navItems = [
   { name: 'Eventos', path: '/admin/events', icon: Calendar },
   { name: 'Gamificación', path: '/admin/gamification', icon: Trophy },
   { name: 'Productos Destacados', path: '/admin/marketing/featured', icon: Star },
+  { name: 'Navegación App', path: '/admin/settings/navigation', icon: Menu },
 ];
 
 interface SidebarProps {

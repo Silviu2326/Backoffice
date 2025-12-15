@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Save, ArrowLeft, DollarSign, Users, Loader2, Tag, X, Plus } from 'lucide-react';
+import { Calendar, MapPin, Save, ArrowLeft, DollarSign, Users, Loader2, Tag, X, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -8,10 +8,11 @@ import FileUpload from '../../components/ui/FileUpload';
 import Button from '../../components/ui/Button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
 import { Event } from '../../types/core';
-import { 
-  getEventById, 
-  createEvent, 
-  updateEvent 
+import {
+  getEventById,
+  createEvent,
+  updateEvent,
+  deleteEvent
 } from '../../features/events/api/eventService';
 import { getStores } from '../../features/retail/api/storeService';
 import { uploadFile } from '../../utils/storage';
@@ -24,6 +25,7 @@ const EventEditor = () => {
   const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [stores, setStores] = useState<Array<{ value: string; label: string }>>([]);
   const [newTag, setNewTag] = useState('');
@@ -252,6 +254,28 @@ const EventEditor = () => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!id || isNew) return;
+
+    const confirmDelete = window.confirm(
+      `¿Estás seguro de que deseas eliminar el evento "${formData.title}"? Esta acción no se puede deshacer.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      setIsDeleting(true);
+      setError(null);
+      await deleteEvent(id);
+      navigate('/admin/events');
+    } catch (err) {
+      console.error('Error deleting event:', err);
+      setError('Error al eliminar el evento');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center min-h-screen">
@@ -278,11 +302,22 @@ const EventEditor = () => {
           </div>
         </div>
         <div className="flex gap-3">
+          {!isNew && (
+            <Button
+              variant="outline"
+              onClick={handleDelete}
+              isLoading={isDeleting}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            >
+              Eliminar
+            </Button>
+          )}
           <Button variant="outline" onClick={() => navigate('/admin/events')}>
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSubmit} 
+          <Button
+            onClick={handleSubmit}
             isLoading={isSaving}
             leftIcon={<Save className="w-4 h-4" />}
           >
