@@ -19,6 +19,8 @@ import {
   deleteStore,
   Store 
 } from '../../features/retail/api/storeService';
+import { OpeningHoursEditor, DaySchedule } from '../../components/retail/OpeningHoursEditor';
+import { getStoreHours, upsertStoreHours } from '../../features/retail/api/storeHoursService';
 
 const StoreDetail = () => {
   const { id } = useParams();
@@ -29,6 +31,7 @@ const StoreDetail = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [store, setStore] = useState<Store | null>(null);
+  const [openingHours, setOpeningHours] = useState<DaySchedule[]>([]);
 
   // Cargar datos desde Supabase
   useEffect(() => {
@@ -49,6 +52,24 @@ const StoreDetail = () => {
           return;
         }
         setStore(fetchedStore);
+
+        // Cargar horarios
+        const hours = await getStoreHours(id);
+        const daysMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+        const editorDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+        const formattedHours: DaySchedule[] = editorDays.map(dayName => {
+            const dayIdx = daysMap.indexOf(dayName);
+            const existing = hours.find(h => h.dayOfWeek === dayIdx);
+            return {
+                day: dayName,
+                isOpen: existing ? !existing.isClosed : true,
+                openTime: existing ? existing.openTime : '09:00',
+                closeTime: existing ? existing.closeTime : '18:00'
+            };
+        });
+        setOpeningHours(formattedHours);
+
       } catch (err) {
         console.error('Error loading store data:', err);
         setError('Error al cargar los datos de la tienda');
@@ -72,6 +93,16 @@ const StoreDetail = () => {
 
       // Actualizar tienda
       await updateStore(id, store);
+
+      // Guardar horarios
+      const daysMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+      const hoursToSave = openingHours.map(h => ({
+          dayOfWeek: daysMap.indexOf(h.day),
+          openTime: h.openTime,
+          closeTime: h.closeTime,
+          isClosed: !h.isOpen
+      }));
+      await upsertStoreHours(id, hoursToSave);
 
       alert('Tienda actualizada correctamente');
     } catch (err) {
@@ -160,36 +191,44 @@ const StoreDetail = () => {
       </div>
 
       {/* Main Content */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Datos de la Tienda</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Input
-            label="Nombre de la Tienda"
-            value={store.name}
-            onChange={(e) => setStore({ ...store, name: e.target.value })}
-            leftIcon={<StoreIcon className="h-4 w-4" />}
-          />
-          <Input
-            label="Dirección"
-            value={store.address}
-            onChange={(e) => setStore({ ...store, address: e.target.value })}
-            leftIcon={<MapPin className="h-4 w-4" />}
-          />
-          <Input
-            label="Ciudad"
-            value={store.city}
-            onChange={(e) => setStore({ ...store, city: e.target.value })}
-          />
-          <Input
-            label="Teléfono"
-            value={store.phone}
-            onChange={(e) => setStore({ ...store, phone: e.target.value })}
-            leftIcon={<Phone className="h-4 w-4" />}
-          />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Datos de la Tienda</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              label="Nombre de la Tienda"
+              value={store.name}
+              onChange={(e) => setStore({ ...store, name: e.target.value })}
+              leftIcon={<StoreIcon className="h-4 w-4" />}
+            />
+            <Input
+              label="Dirección"
+              value={store.address}
+              onChange={(e) => setStore({ ...store, address: e.target.value })}
+              leftIcon={<MapPin className="h-4 w-4" />}
+            />
+            <Input
+              label="Ciudad"
+              value={store.city}
+              onChange={(e) => setStore({ ...store, city: e.target.value })}
+            />
+            <Input
+              label="Teléfono"
+              value={store.phone}
+              onChange={(e) => setStore({ ...store, phone: e.target.value })}
+              leftIcon={<Phone className="h-4 w-4" />}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Opening Hours */}
+        <OpeningHoursEditor 
+          value={openingHours} 
+          onChange={setOpeningHours} 
+        />
+      </div>
 
       <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)}>
         <ModalHeader>Eliminar Tienda</ModalHeader>
