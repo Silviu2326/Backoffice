@@ -12,6 +12,7 @@ import {
   createCharacter, 
   updateCharacter 
 } from '../../features/brand/api/characterService';
+import { uploadFile } from '../../utils/storage';
 
 const CharacterEditor: React.FC = () => {
   const { id } = useParams();
@@ -22,6 +23,8 @@ const CharacterEditor: React.FC = () => {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -34,6 +37,7 @@ const CharacterEditor: React.FC = () => {
     quote: '',
     avatarUrl: '',
     coverImageUrl: '',
+    videoUrl: '',
     videoPresentationUrl: '',
     accentColor: '#ff6b35',
     primaryColor: '#ff6b35',
@@ -86,6 +90,7 @@ const CharacterEditor: React.FC = () => {
           quote: fetchedCharacter.quote || '',
           avatarUrl: fetchedCharacter.avatarUrl || '',
           coverImageUrl: fetchedCharacter.coverImageUrl || '',
+          videoUrl: (fetchedCharacter as any).videoUrl || fetchedCharacter.videoPresentationUrl || '',
           videoPresentationUrl: fetchedCharacter.videoPresentationUrl || '',
           accentColor: fetchedCharacter.accentColor || fetchedCharacter.color || '#ff6b35',
           primaryColor: fetchedCharacter.themeConfig?.primaryColor || '#ff6b35',
@@ -122,8 +127,25 @@ const CharacterEditor: React.FC = () => {
     try {
       setIsSaving(true);
       setError(null);
+      
+      let finalVideoUrl = formData.videoUrl;
 
-      const characterData: Partial<Character> = {
+      // Upload video if selected
+      if (selectedVideoFile) {
+        try {
+          setIsUploading(true);
+          const timestamp = new Date().getTime();
+          const fileName = `characters/videos/${timestamp}_${selectedVideoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+          finalVideoUrl = await uploadFile('media', fileName, selectedVideoFile);
+        } catch (uploadError) {
+          console.error('Error uploading video:', uploadError);
+          alert('Error al subir el video. Se guardará sin actualizar el video.');
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
+      const characterData: Partial<Character> & { videoUrl?: string } = {
         name: formData.name,
         slug: formData.slug || formData.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
         role: formData.role || 'Sin Rol',
@@ -134,7 +156,8 @@ const CharacterEditor: React.FC = () => {
         quote: formData.quote || undefined,
         avatarUrl: formData.avatarUrl || undefined,
         coverImageUrl: formData.coverImageUrl || undefined,
-        videoPresentationUrl: formData.videoPresentationUrl || undefined,
+        videoUrl: finalVideoUrl || undefined,
+        videoPresentationUrl: finalVideoUrl || formData.videoPresentationUrl || undefined,
         accentColor: formData.accentColor,
         themeConfig: {
           primaryColor: formData.primaryColor,
@@ -437,6 +460,43 @@ const CharacterEditor: React.FC = () => {
                   placeholder="https://ejemplo.com/avatar.png"
                 />
                 <p className="text-xs text-text-secondary mt-1">Recomendado: 500x500px, PNG transparente</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Video del Personaje
+                </label>
+                <div className="space-y-4">
+                  <FileUpload
+                    accept="video/*"
+                    maxSize={50 * 1024 * 1024} // 50MB
+                    onFilesChange={(files) => {
+                      if (files.length > 0) {
+                        setSelectedVideoFile(files[0]);
+                      } else {
+                        setSelectedVideoFile(null);
+                      }
+                    }}
+                    isUploading={isUploading}
+                  />
+                  
+                  {selectedVideoFile ? (
+                    <p className="text-xs text-green-400">
+                      Archivo seleccionado: {selectedVideoFile.name}
+                    </p>
+                  ) : formData.videoUrl ? (
+                    <div className="bg-[#3A3A3A] p-2 rounded-lg border border-white/10">
+                      <p className="text-xs text-text-secondary mb-1">Video actual:</p>
+                      <a href={formData.videoUrl} target="_blank" rel="noopener noreferrer" className="text-brand-orange text-sm hover:underline truncate block">
+                        {formData.videoUrl}
+                      </a>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-text-secondary">
+                      Arrastra un video o haz clic para seleccionar. Formato MP4 recomendado.
+                    </p>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>

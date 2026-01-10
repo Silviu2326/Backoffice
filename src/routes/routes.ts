@@ -12,6 +12,8 @@ import EventEditor from '../pages/events/EventEditor';
 import CampaignManager from '../pages/marketing/CampaignManager';
 import CouponManager from '../pages/marketing/CouponManager';
 import FeaturedProductManager from '../pages/marketing/FeaturedProductManager';
+import BannerManager from '../pages/marketing/BannerManager';
+import TabManager from '../pages/marketing/TabManager';
 import ReviewInbox from '../pages/moderation/ReviewInbox';
 import GlobalSettings from '../pages/settings/GlobalSettings';
 import AuditLogViewer from '../pages/settings/AuditLogViewer';
@@ -51,6 +53,8 @@ export const routes: RouteConfig[] = [
   { path: '/admin/gamification/quiz', component: QuizManager, title: 'Gestión de Quizzes' },
   { path: '/admin/marketing/campaigns', component: CampaignManager, title: 'Campañas' },
   { path: '/admin/marketing/coupons', component: CouponManager, title: 'Cupones' },
+  { path: '/admin/marketing/banners', component: BannerManager, title: 'Banners App' },
+  { path: '/admin/marketing/tabs', component: TabManager, title: 'Tabs de Navegación' },
   { path: '/admin/marketing/featured', component: FeaturedProductManager, title: 'Productos Destacados' },
   { path: '/admin/moderation', component: ReviewInbox, title: 'Moderación' },
   { path: '/admin/settings', component: GlobalSettings, title: 'Configuración' },

@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@hello-pangea/dnd": "^18.0.1",
     "@heroicons/react": "^2.1.3",
     "@supabase/supabase-js": "^2.57.4",
     "class-variance-authority": "^0.7.1",

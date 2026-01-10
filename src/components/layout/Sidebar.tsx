@@ -15,7 +15,8 @@ import {
   Settings,
   LogOut,
   HelpCircle,
-  Menu
+  Menu,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -35,7 +36,7 @@ const SidebarLogoutButton = ({ onClose }: { onClose?: () => void }) => {
   };
 
   return (
-    <button 
+    <button
       onClick={handleSignOut}
       className="flex w-full items-center px-3 py-2 text-sm font-medium text-text-secondary hover:text-red-400 transition-colors"
     >
@@ -55,6 +56,8 @@ const navItems = [
   { name: 'Eventos', path: '/admin/events', icon: Calendar },
   { name: 'Gamificación', path: '/admin/gamification', icon: Trophy },
   { name: 'Productos Destacados', path: '/admin/marketing/featured', icon: Star },
+  { name: 'Banners App', path: '/admin/marketing/banners', icon: ImageIcon },
+  { name: 'Tabs de Navegación', path: '/admin/marketing/tabs', icon: Menu },
   { name: 'Navegación App', path: '/admin/settings/navigation', icon: Menu },
 ];
 
@@ -99,7 +102,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className, onClose }) => {
       <div className="p-4 border-t border-white/10 shrink-0">
         <SidebarLogoutButton onClose={onClose} />
         <div className="mt-4 text-xs text-text-secondary text-center">
-            v1.0.0
+          v1.0.0
         </div>
       </div>
     </div>

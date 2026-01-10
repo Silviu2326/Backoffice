@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button';
 import FileUpload from '../../components/ui/FileUpload';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
 import { Character } from '../../types/core';
-import { Plus, Image as ImageIcon, Loader2, Search, Eye, Trash2 } from 'lucide-react';
+import { Plus, Image as ImageIcon, Loader2, Search, Eye, Trash2, Video } from 'lucide-react';
 import { 
   getCharacters, 
   createCharacter, 
@@ -26,6 +26,7 @@ const CharacterList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   
   const [newCharacter, setNewCharacter] = useState({
@@ -33,6 +34,7 @@ const CharacterList: React.FC = () => {
     role: '',
     accentColor: '#ff6b35',
     avatarUrl: '',
+    videoUrl: '',
     description: '',
   });
 
@@ -77,6 +79,7 @@ const CharacterList: React.FC = () => {
     try {
       setIsCreating(true);
       let avatarUrl = newCharacter.avatarUrl;
+      let videoUrl = newCharacter.videoUrl;
 
       // Upload image if selected
       if (selectedFile) {
@@ -92,13 +95,29 @@ const CharacterList: React.FC = () => {
           setIsUploading(false);
         }
       }
+
+      // Upload video if selected
+      if (selectedVideoFile) {
+        try {
+          setIsUploading(true);
+          const timestamp = new Date().getTime();
+          const fileName = `characters/videos/${timestamp}_${selectedVideoFile.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+          videoUrl = await uploadFile('media', fileName, selectedVideoFile);
+        } catch (uploadError) {
+          console.error('Error uploading video:', uploadError);
+          alert('Error al subir el video. Se creará el personaje sin video.');
+        } finally {
+          setIsUploading(false);
+        }
+      }
       
-      const characterData: Omit<Character, 'id' | 'createdAt'> = {
+      const characterData: any = {
         name: newCharacter.name,
         slug: newCharacter.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
         role: 'Sin Rol', // Default role since field is removed
         accentColor: newCharacter.accentColor,
         avatarUrl: avatarUrl || undefined,
+        videoUrl: videoUrl || undefined,
         description: newCharacter.description || undefined,
         isActive: true,
         // Legacy fields
@@ -115,9 +134,11 @@ const CharacterList: React.FC = () => {
         role: '',
         accentColor: '#ff6b35',
         avatarUrl: '',
+        videoUrl: '',
         description: '',
       });
       setSelectedFile(null);
+      setSelectedVideoFile(null);
       
       alert('Personaje creado correctamente');
     } catch (err) {
@@ -380,6 +401,42 @@ const CharacterList: React.FC = () => {
                   ) : (
                     <p className="text-xs text-text-secondary">
                       Arrastra una imagen o haz clic para seleccionar. Recomendado: PNG transparente, 400x800px.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+             {/* Video */}
+            <div>
+              <h3 className="text-sm font-semibold text-white mb-4 pb-2 border-b border-white/10">
+                Video del Personaje
+              </h3>
+              <div>
+                <label className="block text-sm font-medium text-text-secondary mb-2">
+                  Subir Video (Opcional)
+                </label>
+                <div className="space-y-4">
+                  <FileUpload
+                    accept="video/*"
+                    maxSize={50 * 1024 * 1024} // 50MB
+                    onFilesChange={(files) => {
+                      if (files.length > 0) {
+                        setSelectedVideoFile(files[0]);
+                      } else {
+                        setSelectedVideoFile(null);
+                      }
+                    }}
+                    isUploading={isUploading}
+                  />
+                  
+                  {selectedVideoFile ? (
+                    <p className="text-xs text-green-400">
+                      Archivo de video seleccionado: {selectedVideoFile.name}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-text-secondary">
+                      Arrastra un video o haz clic para seleccionar. Formato MP4 recomendado.
                     </p>
                   )}
                 </div>

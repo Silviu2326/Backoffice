@@ -42,6 +42,7 @@ const translations = {
 
 const tabs = [
   { key: 'INICIO', icon: 'home' },
+  { key: 'CHAT IA', icon: 'chatbubbles' },
   { key: 'EVENTOS', icon: 'calendar' },
   { key: 'CERVEZAS', icon: 'wine' },
   { key: 'PERSONAJES', icon: 'people' },
@@ -49,7 +50,6 @@ const tabs = [
   { key: 'EL GATO COOL PUB', icon: 'map' },
   { key: 'LOGROS', icon: 'trophy' },
   { key: 'BEER RUN', icon: 'bicycle' },
-  { key: 'CHAT IA', icon: 'chatbubbles' },
   { key: 'CONTACTO', icon: 'mail' },
 ];
 
