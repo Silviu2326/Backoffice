@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Save, 
-  MapPin, 
-  Phone, 
-  Store as StoreIcon, 
+import {
+  ArrowLeft,
+  Save,
+  MapPin,
+  Phone,
+  Store as StoreIcon,
   Trash2,
   Loader2
 } from 'lucide-react';
@@ -13,14 +13,16 @@ import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
-import { 
-  getStoreById, 
-  updateStore, 
+import {
+  getStoreById,
+  updateStore,
   deleteStore,
-  Store 
+  Store
 } from '../../features/retail/api/storeService';
 import { OpeningHoursEditor, DaySchedule } from '../../components/retail/OpeningHoursEditor';
 import { getStoreHours, upsertStoreHours } from '../../features/retail/api/storeHoursService';
+import FileUpload from '../../components/ui/FileUpload';
+import { uploadFile } from '../../utils/storage';
 
 const StoreDetail = () => {
   const { id } = useParams();
@@ -59,14 +61,14 @@ const StoreDetail = () => {
         const editorDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
         const formattedHours: DaySchedule[] = editorDays.map(dayName => {
-            const dayIdx = daysMap.indexOf(dayName);
-            const existing = hours.find(h => h.dayOfWeek === dayIdx);
-            return {
-                day: dayName,
-                isOpen: existing ? !existing.isClosed : true,
-                openTime: existing ? existing.openTime : '09:00',
-                closeTime: existing ? existing.closeTime : '18:00'
-            };
+          const dayIdx = daysMap.indexOf(dayName);
+          const existing = hours.find(h => h.dayOfWeek === dayIdx);
+          return {
+            day: dayName,
+            isOpen: existing ? !existing.isClosed : true,
+            openTime: existing ? existing.openTime : '09:00',
+            closeTime: existing ? existing.closeTime : '18:00'
+          };
         });
         setOpeningHours(formattedHours);
 
@@ -97,10 +99,10 @@ const StoreDetail = () => {
       // Guardar horarios
       const daysMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       const hoursToSave = openingHours.map(h => ({
-          dayOfWeek: daysMap.indexOf(h.day),
-          openTime: h.openTime,
-          closeTime: h.closeTime,
-          isClosed: !h.isOpen
+        dayOfWeek: daysMap.indexOf(h.day),
+        openTime: h.openTime,
+        closeTime: h.closeTime,
+        isClosed: !h.isOpen
       }));
       await upsertStoreHours(id, hoursToSave);
 
@@ -110,6 +112,21 @@ const StoreDetail = () => {
       setError('Error al guardar la tienda. Por favor, intenta de nuevo.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleLogoUpload = async (files: File[]) => {
+    if (files.length === 0 || !store) return;
+
+    try {
+      const file = files[0];
+      const path = `stores/logos/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, '_')}`;
+      const url = await uploadFile('media', path, file);
+
+      setStore({ ...store, logoUrl: url });
+    } catch (err) {
+      console.error('Error uploading logo:', err);
+      alert('Error al subir el logo');
     }
   };
 
@@ -197,6 +214,42 @@ const StoreDetail = () => {
             <CardTitle>Datos de la Tienda</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white">Logo de la Tienda</label>
+              <div className="flex items-center gap-4">
+                {store.logoUrl && (
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 shrink-0">
+                    <img
+                      src={store.logoUrl}
+                      alt="Logo de la tienda"
+                      className="w-full h-full object-cover"
+                    />
+                    <button
+                      onClick={() => setStore({ ...store, logoUrl: undefined })}
+                      className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500 rounded-full text-white transition-colors"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <FileUpload
+                    accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
+                    maxSize={10 * 1024 * 1024} // 10MB
+                    onFilesChange={handleLogoUpload}
+                    multiple={false}
+                    className={store.logoUrl ? "min-h-[auto]" : ""}
+                    dropzoneClassName={store.logoUrl ? "min-h-[100px] p-4" : ""}
+                  />
+                  {!store.logoUrl && (
+                    <p className="text-xs text-text-secondary mt-1">
+                      Recomendado: 512x512px, formato PNG o JPG
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <Input
               label="Nombre de la Tienda"
               value={store.name}
@@ -215,18 +268,22 @@ const StoreDetail = () => {
               onChange={(e) => setStore({ ...store, city: e.target.value })}
             />
             <Input
-              label="Teléfono"
-              value={store.phone}
-              onChange={(e) => setStore({ ...store, phone: e.target.value })}
               leftIcon={<Phone className="h-4 w-4" />}
+            />
+            <Input
+              label="URL de Google Maps"
+              value={store.googleMapsUrl || ''}
+              onChange={(e) => setStore({ ...store, googleMapsUrl: e.target.value })}
+              leftIcon={<MapPin className="h-4 w-4" />}
+              placeholder="https://maps.google.com/..."
             />
           </CardContent>
         </Card>
 
         {/* Opening Hours */}
-        <OpeningHoursEditor 
-          value={openingHours} 
-          onChange={setOpeningHours} 
+        <OpeningHoursEditor
+          value={openingHours}
+          onChange={setOpeningHours}
         />
       </div>
 
@@ -238,7 +295,7 @@ const StoreDetail = () => {
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Cancelar</Button>
-          <Button variant="default" className="bg-status-error hover:bg-status-error/90" onClick={handleDelete}>Eliminar</Button>
+          <Button variant="danger" className="bg-status-error hover:bg-status-error/90" onClick={handleDelete}>Eliminar</Button>
         </ModalFooter>
       </Modal>
     </div>

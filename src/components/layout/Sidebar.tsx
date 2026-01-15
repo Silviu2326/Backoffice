@@ -16,7 +16,8 @@ import {
   LogOut,
   HelpCircle,
   Menu,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Bell
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -46,8 +47,10 @@ const SidebarLogoutButton = ({ onClose }: { onClose?: () => void }) => {
   );
 };
 
+
 const navItems = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+  { name: 'Notificaciones', path: '/admin/notifications', icon: Bell },
   { name: 'CRM Clientes', path: '/admin/crm/customers', icon: Users },
   { name: 'Pedidos', path: '/admin/orders', icon: ShoppingCart },
   { name: 'Productos', path: '/admin/products', icon: Package },

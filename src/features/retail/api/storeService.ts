@@ -17,6 +17,8 @@ export interface SupabaseStore {
   pickup_instructions?: string;
   is_active: boolean;
   created_at: string;
+  logo_url?: string;
+  google_maps_url?: string;
 }
 
 /**
@@ -43,6 +45,8 @@ export interface Store {
   };
   imageUrl?: string;
   email?: string;
+  logoUrl?: string;
+  googleMapsUrl?: string;
 }
 
 /**
@@ -63,6 +67,8 @@ function mapSupabaseToStore(supabaseStore: SupabaseStore): Store {
     pickupInstructions: supabaseStore.pickup_instructions,
     isActive: supabaseStore.is_active,
     createdAt: supabaseStore.created_at,
+    logoUrl: supabaseStore.logo_url,
+    googleMapsUrl: supabaseStore.google_maps_url,
   };
 }
 
@@ -82,6 +88,8 @@ function mapStoreToSupabase(store: Partial<Store>): Partial<SupabaseStore> {
     allow_pickup: store.allowPickup ?? true,
     pickup_instructions: store.pickupInstructions,
     is_active: store.isActive ?? true,
+    logo_url: store.logoUrl,
+    google_maps_url: store.googleMapsUrl,
   };
 }
 

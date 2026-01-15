@@ -14,11 +14,19 @@ import { getAllEvents, createEvent, deleteEvent } from '../../features/events/ap
 // Map category to colors
 const EVENT_COLORS: Record<string, string> = {
   'Cata': 'bg-purple-500',
+  'El Gato Cool Cata': 'bg-purple-500',
   'Festival': 'bg-blue-500',
+  'El Gato Cool Festival': 'bg-blue-500',
   'Taller': 'bg-green-500',
+  'El Gato Cool Taller': 'bg-green-500',
   'Conferencia': 'bg-orange-500',
+  'El Gato Cool Conferencia': 'bg-orange-500',
   'Concierto': 'bg-pink-500',
+  'El Gato Cool Concierto': 'bg-pink-500',
   'Reunión': 'bg-yellow-500',
+  'El Gato Cool Reunión': 'bg-yellow-500',
+  'Karaoke': 'bg-indigo-500',
+  'El Gato Cool Karaoke': 'bg-indigo-500',
   'default': 'bg-gray-500',
 };
 
@@ -39,7 +47,10 @@ const EventCalendar = () => {
     time: '',
     category: 'Cata',
     location: '',
-    maxAttendees: '' // New state for max attendees
+    maxAttendees: '', // New state for max attendees
+    frequency: 'none',
+    repeatCount: '1',
+    status: 'published'
   });
 
   // Load events from Supabase
@@ -118,28 +129,60 @@ const EventCalendar = () => {
 
     try {
       setIsCreating(true);
-      const startDateTime = combineDateAndTime(newEvent.date, newEvent.time);
-      const endDateTime = combineDateAndTime(newEvent.date, newEvent.time); // Same time for now, can be adjusted
+      const repeatCount = parseInt(newEvent.repeatCount) || 1;
+      const eventsToCreate = [];
 
-      const createdEvent = await createEvent({
-        title: newEvent.title,
-        description: '',
-        category: newEvent.category,
-        status: 'draft',
-        startDate: startDateTime,
-        endDate: endDateTime,
-        location: newEvent.location,
-        locationName: newEvent.location,
-        isFree: true,
-        maxAttendees: newEvent.maxAttendees ? parseInt(newEvent.maxAttendees) : undefined, // Include maxAttendees
-      });
+      // Calculate dates for all occurrences
+      for (let i = 0; i < (newEvent.frequency === 'none' ? 1 : repeatCount); i++) {
+        const dateObj = new Date(newEvent.date);
 
-      // Update local state with the new event immediately
-      setEvents(prevEvents => [...prevEvents, createdEvent]);
+        if (newEvent.frequency === 'weekly') {
+          dateObj.setDate(dateObj.getDate() + (i * 7));
+        } else if (newEvent.frequency === 'daily') {
+          dateObj.setDate(dateObj.getDate() + i);
+        }
+
+        const dateStr = dateObj.toISOString().split('T')[0];
+        const startDateTime = combineDateAndTime(dateStr, newEvent.time);
+        const endDateTime = combineDateAndTime(dateStr, newEvent.time);
+
+        eventsToCreate.push({
+          title: newEvent.title,
+          description: '',
+          category: newEvent.category,
+          status: newEvent.status as 'published' | 'draft' | 'cancelled',
+          startDate: startDateTime,
+          endDate: endDateTime,
+          location: newEvent.location,
+          locationName: newEvent.location,
+          isFree: true,
+          maxAttendees: newEvent.maxAttendees ? parseInt(newEvent.maxAttendees) : undefined,
+        });
+      }
+
+      // Create all events sequentially
+      const createdEvents: Event[] = [];
+      for (const eventData of eventsToCreate) {
+        const created = await createEvent(eventData);
+        createdEvents.push(created);
+      }
+
+      // Update local state adding all new events
+      setEvents(prevEvents => [...prevEvents, ...createdEvents]);
 
       setIsCreateModalOpen(false);
-      setNewEvent({ title: '', date: '', time: '', category: 'Cata', location: '', maxAttendees: '' });
-      alert('Evento creado correctamente');
+      setNewEvent({
+        title: '',
+        date: '',
+        time: '',
+        category: 'Cata',
+        location: '',
+        maxAttendees: '',
+        frequency: 'none',
+        repeatCount: '1',
+        status: 'published'
+      });
+      alert(`Se han creado ${createdEvents.length} eventos correctamente`);
     } catch (error) {
       console.error('Error creating event:', error);
       alert('Error al crear el evento. Por favor, intenta de nuevo.');
@@ -196,14 +239,14 @@ const EventCalendar = () => {
     for (let i = 1; i <= daysInMonth; i++) {
       const dayEvents = getEventsForDay(i);
       const today = new Date();
-      const isToday = 
-        i === today.getDate() && 
-        currentDate.getMonth() === today.getMonth() && 
+      const isToday =
+        i === today.getDate() &&
+        currentDate.getMonth() === today.getMonth() &&
         currentDate.getFullYear() === today.getFullYear();
 
       days.push(
-        <div 
-          key={i} 
+        <div
+          key={i}
           className={cn(
             "h-32 border border-white/5 p-2 cursor-pointer hover:bg-white/5 transition-colors relative flex flex-col gap-1 group",
             isToday ? "bg-white/5" : "bg-[#2C2C2C]"
@@ -218,18 +261,18 @@ const EventCalendar = () => {
               {i}
             </span>
             {dayEvents.length > 0 && (
-                <span className="text-xs bg-white/10 text-gray-300 px-1.5 py-0.5 rounded-md">
-                    {dayEvents.length}
-                </span>
+              <span className="text-xs bg-white/10 text-gray-300 px-1.5 py-0.5 rounded-md">
+                {dayEvents.length}
+              </span>
             )}
           </div>
-          
+
           {/* Event Dots/Bars */}
           <div className="flex flex-col gap-1.5 mt-1 overflow-hidden">
             {dayEvents.slice(0, 3).map((event, idx) => (
               <div key={idx} className="flex items-center gap-1.5 px-1 py-0.5 rounded hover:bg-white/10">
-                 <div className={cn("w-2 h-2 rounded-full shrink-0", getEventColor(event.category))} />
-                 <span className="text-xs text-gray-300 truncate font-medium">{event.title}</span>
+                <div className={cn("w-2 h-2 rounded-full shrink-0", getEventColor(event.category))} />
+                <span className="text-xs text-gray-300 truncate font-medium">{event.title}</span>
               </div>
             ))}
             {dayEvents.length > 3 && (
@@ -255,43 +298,43 @@ const EventCalendar = () => {
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-                <CalendarIcon className="w-6 h-6 text-blue-500" />
-                Calendario de Eventos
-            </h1>
-            <p className="text-gray-400 mt-1">Gestiona y visualiza próximos eventos</p>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <CalendarIcon className="w-6 h-6 text-blue-500" />
+            Calendario de Eventos
+          </h1>
+          <p className="text-gray-400 mt-1">Gestiona y visualiza próximos eventos</p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-4 bg-[#2C2C2C] p-1.5 rounded-xl border border-white/10">
-                <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
-                    <ChevronLeft className="w-5 h-5" />
-                </Button>
-                <span className="text-lg font-semibold min-w-[180px] text-center text-white capitalize">
-                    {currentDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
-                </span>
-                <Button variant="ghost" size="icon" onClick={handleNextMonth}>
-                    <ChevronRight className="w-5 h-5" />
-                </Button>
-            </div>
-            <Button onClick={() => setIsCreateModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
-                Crear Evento
+          <div className="flex items-center gap-4 bg-[#2C2C2C] p-1.5 rounded-xl border border-white/10">
+            <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
+              <ChevronLeft className="w-5 h-5" />
             </Button>
+            <span className="text-lg font-semibold min-w-[180px] text-center text-white capitalize">
+              {currentDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+            </span>
+            <Button variant="ghost" size="icon" onClick={handleNextMonth}>
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </div>
+          <Button onClick={() => setIsCreateModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
+            Crear Evento
+          </Button>
         </div>
       </div>
 
       <Card className="bg-[#1E1E1E] border-white/10 shadow-2xl overflow-hidden">
         {/* Weekday Headers */}
         <div className="grid grid-cols-7 border-b border-white/10 bg-[#252525]">
-            {WEEKDAYS.map(day => (
-                <div key={day} className="py-4 text-center text-sm font-semibold text-gray-400 uppercase tracking-wider">
-                    {day}
-                </div>
-            ))}
+          {WEEKDAYS.map(day => (
+            <div key={day} className="py-4 text-center text-sm font-semibold text-gray-400 uppercase tracking-wider">
+              {day}
+            </div>
+          ))}
         </div>
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 bg-[#1A1A1A]">
-            {renderCalendar()}
+          {renderCalendar()}
         </div>
       </Card>
 
@@ -301,122 +344,161 @@ const EventCalendar = () => {
         title={formatSelectedDate() || 'Eventos'}
       >
         <div className="space-y-4 mt-4">
-            {getEventsForSelectedDate().length > 0 ? (
-                getEventsForSelectedDate().map(event => (
-                    <Card key={event.id} className="bg-[#252525] border-white/5 hover:border-white/10 transition-colors">
-                        <CardContent className="p-4 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className={cn("w-2 h-2 rounded-full", getEventColor(event.category))} />
-                                    <span className="text-xs text-gray-400 uppercase font-semibold tracking-wider">
-                                        {event.category || 'Evento'}
-                                    </span>
-                                </div>
-                            </div>
-                            <h3 className="text-lg font-semibold text-white">{event.title}</h3>
-                            
-                            <div className="space-y-2 text-sm text-gray-400 pt-2 border-t border-white/5">
-                                <div className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-gray-500" />
-                                    {formatTime(event.startDate)}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <MapPin className="w-4 h-4 text-gray-500" />
-                                    {event.location || event.locationName || event.address || 'Sin ubicación'}
-                                </div>
-                            </div>
-                            
-                            <div className="pt-2 flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1"
-                                  onClick={() => navigate(`/admin/events/${event.id}`)}
-                                >
-                                    Ver Detalles
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDeleteEvent(event.id, event.title)}
-                                  className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))
-            ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                        <CalendarIcon className="w-6 h-6 text-gray-500" />
+          {getEventsForSelectedDate().length > 0 ? (
+            getEventsForSelectedDate().map(event => (
+              <Card key={event.id} className="bg-[#252525] border-white/5 hover:border-white/10 transition-colors">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("w-2 h-2 rounded-full", getEventColor(event.category))} />
+                      <span className="text-xs text-gray-400 uppercase font-semibold tracking-wider">
+                        {event.category || 'Evento'}
+                      </span>
                     </div>
-                    <p className="text-gray-400 font-medium">No hay eventos programados</p>
-                    <p className="text-gray-500 text-sm mt-1">Selecciona otro día o añade un evento.</p>
-                    <Button variant="primary" className="mt-6" onClick={() => setIsCreateModalOpen(true)}>Añadir Evento</Button>
-                </div>
-            )}
+                  </div>
+                  <h3 className="text-lg font-semibold text-white">{event.title}</h3>
+
+                  <div className="space-y-2 text-sm text-gray-400 pt-2 border-t border-white/5">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-gray-500" />
+                      {formatTime(event.startDate)}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-gray-500" />
+                      {event.location || event.locationName || event.address || 'Sin ubicación'}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => navigate(`/admin/events/${event.id}`)}
+                    >
+                      Ver Detalles
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteEvent(event.id, event.title)}
+                      className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                <CalendarIcon className="w-6 h-6 text-gray-500" />
+              </div>
+              <p className="text-gray-400 font-medium">No hay eventos programados</p>
+              <p className="text-gray-500 text-sm mt-1">Selecciona otro día o añade un evento.</p>
+              <Button variant="primary" className="mt-6" onClick={() => setIsCreateModalOpen(true)}>Añadir Evento</Button>
+            </div>
+          )}
         </div>
       </Drawer>
 
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
         <ModalHeader>Crear Nuevo Evento</ModalHeader>
         <ModalBody>
-            <div className="space-y-4">
-                <Input
-                    label="Título del Evento"
-                    value={newEvent.title}
-                    onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                    placeholder="Ej. Cata de Cervezas Artesanales"
-                />
-                <div className="grid grid-cols-2 gap-4">
-                    <Input
-                        label="Fecha"
-                        type="date"
-                        value={newEvent.date}
-                        onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                    />
-                    <Input
-                        label="Hora"
-                        type="time"
-                        value={newEvent.time}
-                        onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                    />
-                </div>
-                <Select
-                    label="Categoría"
-                    options={[
-                        { value: 'Cata', label: 'Cata' },
-                        { value: 'Festival', label: 'Festival' },
-                        { value: 'Taller', label: 'Taller' },
-                        { value: 'Conferencia', label: 'Conferencia' },
-                        { value: 'Concierto', label: 'Concierto' },
-                        { value: 'Reunión', label: 'Reunión' },
-                    ]}
-                    value={newEvent.category}
-                    onChange={(val) => setNewEvent({ ...newEvent, category: val })}
-                />
-                <Input
-                    label="Ubicación"
-                    value={newEvent.location}
-                    onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                    placeholder="Ej. El Gato Cool Pub"
-                />
-                <Input
-                    label="Número Máximo de Participantes (Opcional)"
-                    type="number"
-                    value={newEvent.maxAttendees}
-                    onChange={(e) => setNewEvent({ ...newEvent, maxAttendees: e.target.value })}
-                    placeholder="Ej. 50"
-                />
+          <div className="space-y-4">
+            <Input
+              label="Título del Evento"
+              value={newEvent.title}
+              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+              placeholder="Ej. Cata de Cervezas Artesanales"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Fecha"
+                type="date"
+                value={newEvent.date}
+                onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
+              />
+              <Input
+                label="Hora"
+                type="time"
+                value={newEvent.time}
+                onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
+              />
             </div>
+            <Select
+              label="Categoría"
+              options={[
+                { value: 'Cata', label: 'Cata' },
+                { value: 'El Gato Cool Cata', label: 'El Gato Cool Cata' },
+                { value: 'Festival', label: 'Festival' },
+                { value: 'El Gato Cool Festival', label: 'El Gato Cool Festival' },
+                { value: 'Taller', label: 'Taller' },
+                { value: 'El Gato Cool Taller', label: 'El Gato Cool Taller' },
+                { value: 'Conferencia', label: 'Conferencia' },
+                { value: 'El Gato Cool Conferencia', label: 'El Gato Cool Conferencia' },
+                { value: 'Concierto', label: 'Concierto' },
+                { value: 'El Gato Cool Concierto', label: 'El Gato Cool Concierto' },
+                { value: 'Reunión', label: 'Reunión' },
+                { value: 'El Gato Cool Reunión', label: 'El Gato Cool Reunión' },
+                { value: 'Karaoke', label: 'Karaoke' },
+                { value: 'El Gato Cool Karaoke', label: 'El Gato Cool Karaoke' },
+              ]} value={newEvent.category}
+              onChange={(val) => setNewEvent({ ...newEvent, category: val })}
+            />
+            <Select
+              label="Estado"
+              options={[
+                { value: 'published', label: 'Publicado' },
+                { value: 'draft', label: 'Borrador' },
+              ]}
+              value={newEvent.status}
+              onChange={(val) => setNewEvent({ ...newEvent, status: val })}
+            />
+            <Input
+              label="Ubicación"
+              value={newEvent.location}
+              onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
+              placeholder="Ej. El Gato Cool Pub"
+            />
+            <Input
+              label="Número Máximo de Participantes (Opcional)"
+              type="number"
+              value={newEvent.maxAttendees}
+              onChange={(e) => setNewEvent({ ...newEvent, maxAttendees: e.target.value })}
+              placeholder="Ej. 50"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Frecuencia"
+                options={[
+                  { value: 'none', label: 'No repetir' },
+                  { value: 'weekly', label: 'Semanalmente' },
+                  { value: 'daily', label: 'Diariamente' },
+                ]}
+                value={newEvent.frequency}
+                onChange={(val) => setNewEvent({ ...newEvent, frequency: val })}
+              />
+              {newEvent.frequency !== 'none' && (
+                <Input
+                  label="Cantidad de veces"
+                  type="number"
+                  min="1"
+                  max="52"
+                  value={newEvent.repeatCount}
+                  onChange={(e) => setNewEvent({ ...newEvent, repeatCount: e.target.value })}
+                  placeholder="Ej. 3"
+                />
+              )}
+            </div>
+          </div>
         </ModalBody>
         <ModalFooter>
-            <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateEvent} isLoading={isCreating}>
-                Guardar Evento
-            </Button>
+          <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
+          <Button onClick={handleCreateEvent} isLoading={isCreating}>
+            Guardar Evento
+          </Button>
         </ModalFooter>
       </Modal>
     </div>

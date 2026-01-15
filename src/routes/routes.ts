@@ -25,6 +25,7 @@ import GamificationDashboard from '../pages/loyalty/GamificationDashboard';
 import QuizManager from '../pages/gamification/QuizManager';
 import ServiceManager from '../pages/retail/ServiceManager';
 import NavigationManager from '../pages/settings/NavigationManager';
+import Notifications from '../pages/Notifications';
 
 export interface RouteConfig {
   path: string;
@@ -34,6 +35,7 @@ export interface RouteConfig {
 
 export const routes: RouteConfig[] = [
   { path: '/admin/dashboard', component: Dashboard, title: 'Dashboard' },
+  { path: '/admin/notifications', component: Notifications, title: 'Notificaciones' },
   { path: '/admin/crm/customers', component: CustomerList, title: 'Clientes' },
   { path: '/admin/crm/customers/:id', component: CustomerDetail, title: 'Ficha de Cliente' },
   { path: '/admin/orders', component: OrderList, title: 'Pedidos' },

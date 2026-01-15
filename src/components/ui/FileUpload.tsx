@@ -10,6 +10,7 @@ interface FileUploadProps {
   isUploading?: boolean;
   progress?: number;
   className?: string;
+  dropzoneClassName?: string;
 }
 
 export default function FileUpload({
@@ -20,6 +21,7 @@ export default function FileUpload({
   isUploading = false,
   progress = 0,
   className,
+  dropzoneClassName,
 }: FileUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -32,13 +34,13 @@ export default function FileUpload({
     if (typeof accept === 'string') return accept;
     return Object.values(accept).flat().join(', ');
   };
-  
+
   // Helper to get string representation for input attribute
   const getInputAccept = (): string => {
-      if (typeof accept === 'string') return accept;
-      return Object.entries(accept)
-          .map(([mime, exts]) => `${mime},${exts.join(',')}`)
-          .join(',');
+    if (typeof accept === 'string') return accept;
+    return Object.entries(accept)
+      .map(([mime, exts]) => `${mime},${exts.join(',')}`)
+      .join(',');
   }
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -60,44 +62,44 @@ export default function FileUpload({
       setError(`El archivo ${file.name} excede el tamaño máximo de ${(maxSize / 1024 / 1024).toFixed(2)}MB`);
       return false;
     }
-    
+
     // Validate file type
     if (accept && accept !== '*') {
-        let isAccepted = false;
-        const fileType = file.type;
-        const fileName = file.name.toLowerCase();
+      let isAccepted = false;
+      const fileType = file.type;
+      const fileName = file.name.toLowerCase();
 
-        if (typeof accept === 'string') {
-            const acceptedTypes = accept.split(',').map(t => t.trim());
-            isAccepted = acceptedTypes.some(type => {
-                if (type.endsWith('/*')) {
-                    return fileType.startsWith(type.replace('/*', ''));
-                }
-                if (type.startsWith('.')) {
-                    return fileName.endsWith(type.toLowerCase());
-                }
-                return type === fileType;
-            });
-        } else {
-            // Object format: { 'image/*': ['.png', '.jpg'] }
-            isAccepted = Object.entries(accept).some(([mimeType, extensions]) => {
-                if (mimeType === '*' || mimeType === '*/*') return true;
-                if (mimeType.endsWith('/*')) {
-                    if (fileType.startsWith(mimeType.replace('/*', ''))) return true;
-                } else if (mimeType === fileType) {
-                    return true;
-                }
-                // Check extensions
-                return extensions.some(ext => fileName.endsWith(ext.toLowerCase()));
-            });
-        }
+      if (typeof accept === 'string') {
+        const acceptedTypes = accept.split(',').map(t => t.trim());
+        isAccepted = acceptedTypes.some(type => {
+          if (type.endsWith('/*')) {
+            return fileType.startsWith(type.replace('/*', ''));
+          }
+          if (type.startsWith('.')) {
+            return fileName.endsWith(type.toLowerCase());
+          }
+          return type === fileType;
+        });
+      } else {
+        // Object format: { 'image/*': ['.png', '.jpg'] }
+        isAccepted = Object.entries(accept).some(([mimeType, extensions]) => {
+          if (mimeType === '*' || mimeType === '*/*') return true;
+          if (mimeType.endsWith('/*')) {
+            if (fileType.startsWith(mimeType.replace('/*', ''))) return true;
+          } else if (mimeType === fileType) {
+            return true;
+          }
+          // Check extensions
+          return extensions.some(ext => fileName.endsWith(ext.toLowerCase()));
+        });
+      }
 
-        if (!isAccepted) {
-            setError(`El archivo ${file.name} no es un tipo permitido`);
-            return false;
-        }
+      if (!isAccepted) {
+        setError(`El archivo ${file.name} no es un tipo permitido`);
+        return false;
+      }
     }
-    
+
     return true;
   };
 
@@ -123,7 +125,7 @@ export default function FileUpload({
 
   const handleFiles = (newFiles: File[]) => {
     const validFiles = newFiles.filter(validateFile);
-    
+
     if (validFiles.length === 0) return;
 
     let updatedFiles: File[];
@@ -153,10 +155,10 @@ export default function FileUpload({
 
   const removeFile = (index: number) => {
     if (isUploading) return;
-    
+
     const updatedFiles = files.filter((_, i) => i !== index);
     const updatedPreviews = previews.filter((_, i) => i !== index);
-    
+
     // Revoke URL to avoid memory leaks
     if (previews[index]) {
       URL.revokeObjectURL(previews[index]);
@@ -187,7 +189,8 @@ export default function FileUpload({
           "relative border-2 border-dashed rounded-lg p-8 transition-all cursor-pointer flex flex-col items-center justify-center text-center min-h-[200px]",
           isDragging ? "border-brand-orange bg-brand-orange/10" : "border-white/10 hover:border-white/20 bg-white/5",
           isUploading && "opacity-50 cursor-not-allowed",
-          error && "border-red-500/50 bg-red-500/10"
+          error && "border-red-500/50 bg-red-500/10",
+          dropzoneClassName
         )}
       >
         <input
@@ -199,11 +202,11 @@ export default function FileUpload({
           onChange={handleFileInput}
           disabled={isUploading}
         />
-        
+
         <div className="bg-white/5 p-4 rounded-full shadow-sm mb-4">
           {isUploading ? (
             <div className="animate-pulse">
-               <Upload className="w-8 h-8 text-blue-500" />
+              <Upload className="w-8 h-8 text-blue-500" />
             </div>
           ) : (
             <Upload className={cn("w-8 h-8", isDragging ? "text-brand-orange" : "text-text-secondary")} />
@@ -227,17 +230,17 @@ export default function FileUpload({
 
         {error && (
           <div className="absolute bottom-2 left-0 right-0 text-center">
-             <p className="text-sm text-red-400 flex items-center justify-center gap-1">
-               <AlertCircle className="w-4 h-4" /> {error}
-             </p>
+            <p className="text-sm text-red-400 flex items-center justify-center gap-1">
+              <AlertCircle className="w-4 h-4" /> {error}
+            </p>
           </div>
         )}
       </div>
 
       {isUploading && (
         <div className="w-full bg-white/10 rounded-full h-2.5">
-          <div 
-            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+          <div
+            className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
             style={{ width: `${progress}%` }}
           ></div>
           <p className="text-xs text-right mt-1 text-text-secondary">{progress}% Subiendo...</p>
@@ -250,15 +253,15 @@ export default function FileUpload({
             <div key={`${file.name}-${index}`} className="relative group bg-[#2C2C2C] border border-white/10 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
               <div className="aspect-square relative bg-white/5 flex items-center justify-center overflow-hidden">
                 {previews[index] ? (
-                  <img 
-                    src={previews[index]} 
-                    alt={file.name} 
+                  <img
+                    src={previews[index]}
+                    alt={file.name}
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <FileIcon className="w-12 h-12 text-gray-600" />
                 )}
-                
+
                 {!isUploading && (
                   <button
                     onClick={(e) => {
