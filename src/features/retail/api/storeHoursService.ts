@@ -137,7 +137,7 @@ export async function deleteStoreHours(storeId: string): Promise<void> {
 export async function createStoreHour(hour: Omit<StoreHours, 'id'>): Promise<StoreHours> {
   try {
     const supabaseHour = mapStoreHoursToSupabase(hour);
-    
+
     const { data, error } = await supabase
       .from('store_hours')
       .insert({
@@ -206,31 +206,27 @@ export async function deleteStoreHour(id: string): Promise<void> {
 }
 
 /**
- * Obtiene el horario de un día específico
+ * Obtiene los horarios de un día específico
  */
-export async function getStoreHourByDay(
+export async function getStoreHoursByDay(
   storeId: string,
   dayOfWeek: number
-): Promise<StoreHours | null> {
+): Promise<StoreHours[]> {
   try {
     const { data, error } = await supabase
       .from('store_hours')
       .select('*')
       .eq('store_id', storeId)
-      .eq('day_of_week', dayOfWeek)
-      .single();
+      .eq('day_of_week', dayOfWeek);
 
     if (error) {
-      if (error.code === 'PGRST116') {
-        return null;
-      }
-      console.error('Error fetching store hour by day:', error);
+      console.error('Error fetching store hours by day:', error);
       throw error;
     }
 
-    return data ? mapSupabaseToStoreHours(data) : null;
+    return (data || []).map(mapSupabaseToStoreHours);
   } catch (error) {
-    console.error('Error in getStoreHourByDay:', error);
+    console.error('Error in getStoreHoursByDay:', error);
     throw error;
   }
 }
@@ -244,13 +240,22 @@ export async function isStoreOpen(storeId: string, dateTime?: Date): Promise<boo
     const dayOfWeek = checkDate.getDay(); // 0=Domingo, 6=Sábado
     const currentTime = `${checkDate.getHours().toString().padStart(2, '0')}:${checkDate.getMinutes().toString().padStart(2, '0')}`;
 
-    const hour = await getStoreHourByDay(storeId, dayOfWeek);
-    
-    if (!hour || hour.isClosed) {
+    const hours = await getStoreHoursByDay(storeId, dayOfWeek);
+
+    // Si no hay horarios definidos o todos están marcados como cerrados (aunque la lógica de 'isClosed' suele ser explícita)
+    // En nuestro modelo, si hay filas, comprobamos si alguna coincide con el horario actual y NO está cerrada.
+    // Si no hay filas, asumimos cerrado.
+    if (!hours || hours.length === 0) {
       return false;
     }
 
-    return currentTime >= hour.openTime && currentTime <= hour.closeTime;
+    // Buscamos si hay ALGÚN intervalo que esté abierto y cubra la hora actual
+    const isOpen = hours.some(h => {
+      if (h.isClosed) return false;
+      return currentTime >= h.openTime && currentTime <= h.closeTime;
+    });
+
+    return isOpen;
   } catch (error) {
     console.error('Error in isStoreOpen:', error);
     return false;

@@ -19,6 +19,7 @@ export interface SupabaseStore {
   created_at: string;
   logo_url?: string;
   google_maps_url?: string;
+  category?: string;
 }
 
 /**
@@ -38,6 +39,7 @@ export interface Store {
   pickupInstructions?: string;
   isActive: boolean;
   createdAt: string;
+  category?: string;
   // Campos adicionales para el backoffice
   coordinates?: {
     lat: number;
@@ -69,6 +71,7 @@ function mapSupabaseToStore(supabaseStore: SupabaseStore): Store {
     createdAt: supabaseStore.created_at,
     logoUrl: supabaseStore.logo_url,
     googleMapsUrl: supabaseStore.google_maps_url,
+    category: supabaseStore.category,
   };
 }
 
@@ -90,6 +93,7 @@ function mapStoreToSupabase(store: Partial<Store>): Partial<SupabaseStore> {
     is_active: store.isActive ?? true,
     logo_url: store.logoUrl,
     google_maps_url: store.googleMapsUrl,
+    category: store.category,
   };
 }
 

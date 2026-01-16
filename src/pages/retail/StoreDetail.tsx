@@ -13,6 +13,7 @@ import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
+import { Select } from '../../components/ui/Select';
 import {
   getStoreById,
   updateStore,
@@ -60,14 +61,44 @@ const StoreDetail = () => {
         const daysMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         const editorDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
+        // Group headers by day
+        const hoursByDay = new Map<number, typeof hours>();
+        hours.forEach(h => {
+          const list = hoursByDay.get(h.dayOfWeek) || [];
+          list.push(h);
+          hoursByDay.set(h.dayOfWeek, list);
+        });
+
         const formattedHours: DaySchedule[] = editorDays.map(dayName => {
           const dayIdx = daysMap.indexOf(dayName);
-          const existing = hours.find(h => h.dayOfWeek === dayIdx);
+          const dayHours = hoursByDay.get(dayIdx) || [];
+
+          // Logic: If no hours, open default. If explicitly closed, closed. If hours exist, map them.
+          const isClosed = dayHours.some(h => h.isClosed);
+
+          if (dayHours.length === 0) {
+            return {
+              day: dayName,
+              isOpen: true,
+              periods: [{ openTime: '09:00', closeTime: '18:00' }]
+            };
+          }
+
+          if (isClosed) {
+            return {
+              day: dayName,
+              isOpen: false,
+              periods: [{ openTime: '09:00', closeTime: '18:00' }]
+            };
+          }
+
           return {
             day: dayName,
-            isOpen: existing ? !existing.isClosed : true,
-            openTime: existing ? existing.openTime : '09:00',
-            closeTime: existing ? existing.closeTime : '18:00'
+            isOpen: true,
+            periods: dayHours.map(h => ({
+              openTime: h.openTime,
+              closeTime: h.closeTime
+            }))
           };
         });
         setOpeningHours(formattedHours);
@@ -98,12 +129,27 @@ const StoreDetail = () => {
 
       // Guardar horarios
       const daysMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      const hoursToSave = openingHours.map(h => ({
-        dayOfWeek: daysMap.indexOf(h.day),
-        openTime: h.openTime,
-        closeTime: h.closeTime,
-        isClosed: !h.isOpen
-      }));
+
+      const hoursToSave = openingHours.flatMap(h => {
+        const dayIdx = daysMap.indexOf(h.day);
+
+        if (!h.isOpen) {
+          return [{
+            dayOfWeek: dayIdx,
+            isClosed: true,
+            openTime: '00:00',
+            closeTime: '00:00'
+          }];
+        }
+
+        return h.periods.map(p => ({
+          dayOfWeek: dayIdx,
+          openTime: p.openTime,
+          closeTime: p.closeTime,
+          isClosed: false
+        }));
+      });
+
       await upsertStoreHours(id, hoursToSave);
 
       alert('Tienda actualizada correctamente');
@@ -266,6 +312,18 @@ const StoreDetail = () => {
               label="Ciudad"
               value={store.city}
               onChange={(e) => setStore({ ...store, city: e.target.value })}
+            />
+            <Select
+              label="Categoría"
+              value={store.category}
+              onChange={(value) => setStore({ ...store, category: value })}
+              options={[
+                { value: 'pubs', label: 'Pubs' },
+                { value: 'cafes_bars', label: 'Cafes / Bars' },
+                { value: 'restaurants', label: 'Restaurants' },
+                { value: 'supermercados', label: 'Supermercados' },
+              ]}
+              placeholder="Seleccionar categoría"
             />
             <Input
               leftIcon={<Phone className="h-4 w-4" />}
