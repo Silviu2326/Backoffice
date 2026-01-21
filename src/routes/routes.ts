@@ -26,6 +26,7 @@ import QuizManager from '../pages/gamification/QuizManager';
 import ServiceManager from '../pages/retail/ServiceManager';
 import NavigationManager from '../pages/settings/NavigationManager';
 import Notifications from '../pages/Notifications';
+import MrCoolCat from '../pages/mrcoolcat/MrCoolCat';
 
 export interface RouteConfig {
   path: string;
@@ -62,4 +63,5 @@ export const routes: RouteConfig[] = [
   { path: '/admin/settings', component: GlobalSettings, title: 'Configuración' },
   { path: '/admin/settings/audit', component: AuditLogViewer, title: 'Auditoría' },
   { path: '/admin/settings/navigation', component: NavigationManager, title: 'Navegación de la App' },
+  { path: '/admin/mrcoolcat', component: MrCoolCat, title: 'Mr. Cool Cat' },
 ];

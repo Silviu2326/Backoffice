@@ -17,7 +17,8 @@ import {
   HelpCircle,
   Menu,
   Image as ImageIcon,
-  Bell
+  Bell,
+  Cat
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -62,6 +63,7 @@ const navItems = [
   { name: 'Banners App', path: '/admin/marketing/banners', icon: ImageIcon },
   { name: 'Tabs de Navegación', path: '/admin/marketing/tabs', icon: Menu },
   { name: 'Navegación App', path: '/admin/settings/navigation', icon: Menu },
+  { name: 'Mr. Cool Cat', path: '/admin/mrcoolcat', icon: Cat },
 ];
 
 interface SidebarProps {
