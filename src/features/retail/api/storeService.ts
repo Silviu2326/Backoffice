@@ -20,6 +20,13 @@ export interface SupabaseStore {
   logo_url?: string;
   google_maps_url?: string;
   category?: string;
+  latitude?: number;
+  longitude?: number;
+  neighborhood?: string;
+  district?: string;
+  postal_code?: string;
+  country?: string;
+  province?: string;
 }
 
 /**
@@ -49,6 +56,14 @@ export interface Store {
   email?: string;
   logoUrl?: string;
   googleMapsUrl?: string;
+  // Geolocalización
+  latitude?: number;
+  longitude?: number;
+  neighborhood?: string;
+  district?: string;
+  postalCode?: string;
+  country?: string;
+  province?: string;
 }
 
 /**
@@ -72,6 +87,13 @@ function mapSupabaseToStore(supabaseStore: SupabaseStore): Store {
     logoUrl: supabaseStore.logo_url,
     googleMapsUrl: supabaseStore.google_maps_url,
     category: supabaseStore.category,
+    latitude: supabaseStore.latitude,
+    longitude: supabaseStore.longitude,
+    neighborhood: supabaseStore.neighborhood,
+    district: supabaseStore.district,
+    postalCode: supabaseStore.postal_code,
+    country: supabaseStore.country,
+    province: supabaseStore.province,
   };
 }
 
@@ -94,6 +116,13 @@ function mapStoreToSupabase(store: Partial<Store>): Partial<SupabaseStore> {
     logo_url: store.logoUrl,
     google_maps_url: store.googleMapsUrl,
     category: store.category,
+    latitude: store.latitude,
+    longitude: store.longitude,
+    neighborhood: store.neighborhood,
+    district: store.district,
+    postal_code: store.postalCode,
+    country: store.country,
+    province: store.province,
   };
 }
 

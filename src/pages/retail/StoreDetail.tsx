@@ -255,88 +255,148 @@ const StoreDetail = () => {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Datos de la Tienda</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-white">Logo de la Tienda</label>
-              <div className="flex items-center gap-4">
-                {store.logoUrl && (
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 shrink-0">
-                    <img
-                      src={store.logoUrl}
-                      alt="Logo de la tienda"
-                      className="w-full h-full object-cover"
-                    />
-                    <button
-                      onClick={() => setStore({ ...store, logoUrl: undefined })}
-                      className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500 rounded-full text-white transition-colors"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <FileUpload
-                    accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
-                    maxSize={10 * 1024 * 1024} // 10MB
-                    onFilesChange={handleLogoUpload}
-                    multiple={false}
-                    className={store.logoUrl ? "min-h-[auto]" : ""}
-                    dropzoneClassName={store.logoUrl ? "min-h-[100px] p-4" : ""}
-                  />
-                  {!store.logoUrl && (
-                    <p className="text-xs text-text-secondary mt-1">
-                      Recomendado: 512x512px, formato PNG o JPG
-                    </p>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Datos de la Tienda</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white">Logo de la Tienda</label>
+                <div className="flex items-center gap-4">
+                  {store.logoUrl && (
+                    <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 shrink-0">
+                      <img
+                        src={store.logoUrl}
+                        alt="Logo de la tienda"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        onClick={() => setStore({ ...store, logoUrl: undefined })}
+                        className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500 rounded-full text-white transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   )}
+                  <div className="flex-1">
+                    <FileUpload
+                      accept={{ 'image/*': ['.png', '.jpg', '.jpeg', '.webp'] }}
+                      maxSize={10 * 1024 * 1024} // 10MB
+                      onFilesChange={handleLogoUpload}
+                      multiple={false}
+                      className={store.logoUrl ? "min-h-[auto]" : ""}
+                      dropzoneClassName={store.logoUrl ? "min-h-[100px] p-4" : ""}
+                    />
+                    {!store.logoUrl && (
+                      <p className="text-xs text-text-secondary mt-1">
+                        Recomendado: 512x512px, formato PNG o JPG
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <Input
-              label="Nombre de la Tienda"
-              value={store.name}
-              onChange={(e) => setStore({ ...store, name: e.target.value })}
-              leftIcon={<StoreIcon className="h-4 w-4" />}
-            />
-            <Input
-              label="Dirección"
-              value={store.address}
-              onChange={(e) => setStore({ ...store, address: e.target.value })}
-              leftIcon={<MapPin className="h-4 w-4" />}
-            />
-            <Input
-              label="Ciudad"
-              value={store.city}
-              onChange={(e) => setStore({ ...store, city: e.target.value })}
-            />
-            <Select
-              label="Categoría"
-              value={store.category}
-              onChange={(value) => setStore({ ...store, category: value })}
-              options={[
-                { value: 'pubs', label: 'Pubs' },
-                { value: 'cafes_bars', label: 'Cafes / Bars' },
-                { value: 'restaurants', label: 'Restaurants' },
-                { value: 'supermercados', label: 'Supermercados' },
-              ]}
-              placeholder="Seleccionar categoría"
-            />
-            <Input
-              leftIcon={<Phone className="h-4 w-4" />}
-            />
-            <Input
-              label="URL de Google Maps"
-              value={store.googleMapsUrl || ''}
-              onChange={(e) => setStore({ ...store, googleMapsUrl: e.target.value })}
-              leftIcon={<MapPin className="h-4 w-4" />}
-              placeholder="https://maps.google.com/..."
-            />
-          </CardContent>
-        </Card>
+              <Input
+                label="Nombre de la Tienda"
+                value={store.name}
+                onChange={(e) => setStore({ ...store, name: e.target.value })}
+                leftIcon={<StoreIcon className="h-4 w-4" />}
+              />
+              <Input
+                label="Dirección"
+                value={store.address}
+                onChange={(e) => setStore({ ...store, address: e.target.value })}
+                leftIcon={<MapPin className="h-4 w-4" />}
+              />
+              <Input
+                label="Ciudad"
+                value={store.city}
+                onChange={(e) => setStore({ ...store, city: e.target.value })}
+              />
+              <Select
+                label="Categoría"
+                value={store.category}
+                onChange={(value) => setStore({ ...store, category: value })}
+                options={[
+                  { value: 'pubs', label: 'Pubs' },
+                  { value: 'cafes_bars', label: 'Cafes / Bars' },
+                  { value: 'restaurants', label: 'Restaurants' },
+                  { value: 'supermercados', label: 'Supermercados' },
+                ]}
+                placeholder="Seleccionar categoría"
+              />
+              <Input
+                leftIcon={<Phone className="h-4 w-4" />}
+                value={store.phone || ''}
+                onChange={(e) => setStore({ ...store, phone: e.target.value })}
+              />
+              <Input
+                label="URL de Google Maps"
+                value={store.googleMapsUrl || ''}
+                onChange={(e) => setStore({ ...store, googleMapsUrl: e.target.value })}
+                leftIcon={<MapPin className="h-4 w-4" />}
+                placeholder="https://maps.google.com/..."
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Ubicación y Geolocalización</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Latitud"
+                  type="number"
+                  step="0.000001"
+                  value={store.latitude || ''}
+                  onChange={(e) => setStore({ ...store, latitude: parseFloat(e.target.value) })}
+                  placeholder="38.345678"
+                />
+                <Input
+                  label="Longitud"
+                  type="number"
+                  step="0.000001"
+                  value={store.longitude || ''}
+                  onChange={(e) => setStore({ ...store, longitude: parseFloat(e.target.value) })}
+                  placeholder="-0.483456"
+                />
+              </div>
+              <Input
+                label="Barrio / Zona"
+                value={store.neighborhood || ''}
+                onChange={(e) => setStore({ ...store, neighborhood: e.target.value })}
+                placeholder="Ej. Centro, Plaza San Cristóbal"
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Distrito"
+                  value={store.district || ''}
+                  onChange={(e) => setStore({ ...store, district: e.target.value })}
+                />
+                <Input
+                  label="Código Postal"
+                  value={store.postalCode || ''}
+                  onChange={(e) => setStore({ ...store, postalCode: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Provincia"
+                  value={store.province || ''}
+                  onChange={(e) => setStore({ ...store, province: e.target.value })}
+                />
+                <Input
+                  label="País"
+                  value={store.country || 'España'}
+                  onChange={(e) => setStore({ ...store, country: e.target.value })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Opening Hours */}
         <OpeningHoursEditor

@@ -7,8 +7,8 @@ export interface SupabaseStoreHours {
   id: string;
   store_id: string;
   day_of_week: number; // 0=Domingo, 6=Sábado
-  open_time: string; // "09:00:00"
-  close_time: string; // "22:00:00"
+  open_time: string | null; // "09:00:00"
+  close_time: string | null; // "22:00:00"
   is_closed: boolean;
 }
 
@@ -32,8 +32,8 @@ function mapSupabaseToStoreHours(supabaseHours: SupabaseStoreHours): StoreHours 
     id: supabaseHours.id,
     storeId: supabaseHours.store_id,
     dayOfWeek: supabaseHours.day_of_week,
-    openTime: supabaseHours.open_time.substring(0, 5), // "09:00:00" -> "09:00"
-    closeTime: supabaseHours.close_time.substring(0, 5),
+    openTime: supabaseHours.open_time ? supabaseHours.open_time.substring(0, 5) : '00:00', // "09:00:00" -> "09:00", default to "00:00"
+    closeTime: supabaseHours.close_time ? supabaseHours.close_time.substring(0, 5) : '00:00',
     isClosed: supabaseHours.is_closed,
   };
 }
