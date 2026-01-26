@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Cat, Upload, Loader2, MapPin, ExternalLink, User, Home, Save } from 'lucide-react';
+import { Cat, Upload, Loader2, MapPin, ExternalLink, User, Home, Save, Video } from 'lucide-react';
 import FileUpload from '../../components/ui/FileUpload';
 import { uploadFile } from '../../utils/storage';
 import { supabase } from '../../lib/supabase';
@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 
 const BUCKET_NAME = 'media';
 const FILE_PATH = 'mrcoolcat/avatar';
+const VIDEO_FILE_PATH = 'mrcoolcat/video';
 const CHARACTER_SLUG = 'mr-cool-cat';
 
 export default function MrCoolCat() {
@@ -16,6 +17,12 @@ export default function MrCoolCat() {
   const [isLoading, setIsLoading] = useState(true);
   const [characterId, setCharacterId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Estados para video
+  const [currentVideo, setCurrentVideo] = useState<string | null>(null);
+  const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(true);
 
   // Campos del personaje
   const [name, setName] = useState('');
@@ -27,6 +34,7 @@ export default function MrCoolCat() {
 
   useEffect(() => {
     loadCurrentImage();
+    loadCurrentVideo();
     loadCharacterData();
   }, []);
 
@@ -111,11 +119,42 @@ export default function MrCoolCat() {
     }
   };
 
+  const loadCurrentVideo = async () => {
+    try {
+      const { data } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list('mrcoolcat', { limit: 10, search: 'video' });
+
+      if (data && data.length > 0) {
+        const videoFile = data.find(f => f.name.startsWith('video'));
+        if (videoFile) {
+          const { data: urlData } = supabase.storage
+            .from(BUCKET_NAME)
+            .getPublicUrl(`mrcoolcat/${videoFile.name}`);
+
+          setCurrentVideo(`${urlData.publicUrl}?t=${Date.now()}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading video:', error);
+    } finally {
+      setIsLoadingVideo(false);
+    }
+  };
+
   const handleFilesChange = (files: File[]) => {
     if (files.length > 0) {
       setSelectedFile(files[0]);
     } else {
       setSelectedFile(null);
+    }
+  };
+
+  const handleVideoFilesChange = (files: File[]) => {
+    if (files.length > 0) {
+      setSelectedVideoFile(files[0]);
+    } else {
+      setSelectedVideoFile(null);
     }
   };
 
@@ -140,6 +179,27 @@ export default function MrCoolCat() {
     }
   };
 
+  const handleUploadVideo = async () => {
+    if (!selectedVideoFile) return;
+
+    setIsUploadingVideo(true);
+    try {
+      const extension = selectedVideoFile.name.split('.').pop();
+      const path = `${VIDEO_FILE_PATH}.${extension}`;
+
+      const publicUrl = await uploadFile(BUCKET_NAME, path, selectedVideoFile);
+
+      setCurrentVideo(`${publicUrl}?t=${Date.now()}`);
+      setSelectedVideoFile(null);
+      toast.success('Video subido correctamente');
+    } catch (error) {
+      console.error('Error uploading video:', error);
+      toast.error('Error al subir el video');
+    } finally {
+      setIsUploadingVideo(false);
+    }
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-8">
@@ -148,68 +208,12 @@ export default function MrCoolCat() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-white">Mr. Cool Cat</h1>
-          <p className="text-text-secondary">Gestiona la imagen del personaje</p>
+          <p className="text-text-secondary">Gestiona los datos del local</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Imagen actual */}
-        <div className="bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Imagen Actual</h2>
-          <div className="aspect-square rounded-lg overflow-hidden bg-white/5 flex items-center justify-center">
-            {isLoading ? (
-              <Loader2 className="w-12 h-12 text-text-secondary animate-spin" />
-            ) : currentImage ? (
-              <img
-                src={currentImage}
-                alt="Mr. Cool Cat"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="text-center text-text-secondary">
-                <Cat className="w-16 h-16 mx-auto mb-2 opacity-50" />
-                <p>Sin imagen</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Subir nueva imagen */}
-        <div className="bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
-          <h2 className="text-lg font-semibold text-white mb-4">Subir Nueva Imagen</h2>
-
-          <FileUpload
-            accept="image/*"
-            multiple={false}
-            maxSize={5 * 1024 * 1024}
-            onFilesChange={handleFilesChange}
-            isUploading={isUploading}
-          />
-
-          {selectedFile && (
-            <button
-              onClick={handleUpload}
-              disabled={isUploading}
-              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-orange hover:bg-brand-orange/90 disabled:bg-brand-orange/50 text-white font-medium rounded-lg transition-colors"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Subiendo...
-                </>
-              ) : (
-                <>
-                  <Upload className="w-5 h-5" />
-                  Guardar Imagen
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Datos del Local */}
-      <div className="mt-6 bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
+      {/* Datos del Local - ARRIBA */}
+      <div className="bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-brand-orange/20 rounded-lg">
@@ -302,6 +306,126 @@ export default function MrCoolCat() {
               </a>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Sección de Imagen - ABAJO */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Imagen actual */}
+        <div className="bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Imagen Actual</h2>
+          <div className="aspect-square rounded-lg overflow-hidden bg-white/5 flex items-center justify-center">
+            {isLoading ? (
+              <Loader2 className="w-12 h-12 text-text-secondary animate-spin" />
+            ) : currentImage ? (
+              <img
+                src={currentImage}
+                alt="Mr. Cool Cat"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-center text-text-secondary">
+                <Cat className="w-16 h-16 mx-auto mb-2 opacity-50" />
+                <p>Sin imagen</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Subir nueva imagen */}
+        <div className="bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
+          <h2 className="text-lg font-semibold text-white mb-4">Subir Nueva Imagen</h2>
+
+          <FileUpload
+            accept="image/*"
+            multiple={false}
+            maxSize={5 * 1024 * 1024}
+            onFilesChange={handleFilesChange}
+            isUploading={isUploading}
+          />
+
+          {selectedFile && (
+            <button
+              onClick={handleUpload}
+              disabled={isUploading}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-orange hover:bg-brand-orange/90 disabled:bg-brand-orange/50 text-white font-medium rounded-lg transition-colors"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5" />
+                  Guardar Imagen
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Sección de Video - ABAJO */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Video actual */}
+        <div className="bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Video className="w-5 h-5 text-brand-orange" />
+            <h2 className="text-lg font-semibold text-white">Video Actual</h2>
+          </div>
+          <div className="aspect-video rounded-lg overflow-hidden bg-white/5 flex items-center justify-center">
+            {isLoadingVideo ? (
+              <Loader2 className="w-12 h-12 text-text-secondary animate-spin" />
+            ) : currentVideo ? (
+              <video
+                src={currentVideo}
+                controls
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="text-center text-text-secondary">
+                <Video className="w-16 h-16 mx-auto mb-2 opacity-50" />
+                <p>Sin video</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Subir nuevo video */}
+        <div className="bg-[#2C2C2C] rounded-xl border border-white/10 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Upload className="w-5 h-5 text-brand-orange" />
+            <h2 className="text-lg font-semibold text-white">Subir Nuevo Video</h2>
+          </div>
+
+          <FileUpload
+            accept="video/*"
+            multiple={false}
+            maxSize={100 * 1024 * 1024}
+            onFilesChange={handleVideoFilesChange}
+            isUploading={isUploadingVideo}
+          />
+
+          {selectedVideoFile && (
+            <button
+              onClick={handleUploadVideo}
+              disabled={isUploadingVideo}
+              className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-3 bg-brand-orange hover:bg-brand-orange/90 disabled:bg-brand-orange/50 text-white font-medium rounded-lg transition-colors"
+            >
+              {isUploadingVideo ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Subiendo...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5" />
+                  Guardar Video
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

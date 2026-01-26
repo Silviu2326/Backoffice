@@ -378,11 +378,19 @@ const EventEditor = () => {
                 label="Categoría"
                 options={[
                   { value: 'Cata', label: 'Cata' },
+                  { value: 'El Gato Cool Cata', label: 'El Gato Cool Cata' },
                   { value: 'Festival', label: 'Festival' },
+                  { value: 'El Gato Cool Festival', label: 'El Gato Cool Festival' },
                   { value: 'Taller', label: 'Taller' },
+                  { value: 'El Gato Cool Taller', label: 'El Gato Cool Taller' },
                   { value: 'Conferencia', label: 'Conferencia' },
+                  { value: 'El Gato Cool Conferencia', label: 'El Gato Cool Conferencia' },
                   { value: 'Concierto', label: 'Concierto' },
+                  { value: 'El Gato Cool Concierto', label: 'El Gato Cool Concierto' },
                   { value: 'Reunión', label: 'Reunión' },
+                  { value: 'El Gato Cool Reunión', label: 'El Gato Cool Reunión' },
+                  { value: 'Karaoke', label: 'Karaoke' },
+                  { value: 'El Gato Cool Karaoke', label: 'El Gato Cool Karaoke' },
                 ]}
                 value={formData.category}
                 onChange={(val) => handleSelectChange('category', val)}
