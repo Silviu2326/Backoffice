@@ -438,6 +438,14 @@ export interface Event {
   ageRestriction?: string;
   /** Creation timestamp */
   createdAt: string;
+  /** UUID linking events in a recurring series */
+  recurrenceGroupId?: string;
+  /** Frequency of recurrence */
+  recurrenceFrequency?: 'none' | 'daily' | 'weekly';
+  /** Total number of events in the recurrence series */
+  recurrenceCount?: number;
+  /** Position of this event in the series (0-indexed) */
+  recurrenceIndex?: number;
 }
 
 /**

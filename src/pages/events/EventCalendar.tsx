@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus, Loader2, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, MapPin, Plus, Loader2, Trash2, RefreshCw } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import Drawer from '../../components/ui/Drawer';
 import Button from '../../components/ui/Button';
@@ -9,7 +9,7 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Event } from '../../types/core';
-import { getAllEvents, createEvent, deleteEvent } from '../../features/events/api/eventService';
+import { getAllEvents, createEvent, deleteEvent, createRecurringEvents, deleteEventGroup } from '../../features/events/api/eventService';
 
 // Map category to colors
 const EVENT_COLORS: Record<string, string> = {
@@ -129,45 +129,38 @@ const EventCalendar = () => {
 
     try {
       setIsCreating(true);
-      const repeatCount = parseInt(newEvent.repeatCount) || 1;
-      const eventsToCreate = [];
+      const startDateTime = combineDateAndTime(newEvent.date, newEvent.time);
+      const endDateTime = combineDateAndTime(newEvent.date, newEvent.time);
 
-      // Calculate dates for all occurrences
-      for (let i = 0; i < (newEvent.frequency === 'none' ? 1 : repeatCount); i++) {
-        const dateObj = new Date(newEvent.date);
+      const baseEventData = {
+        title: newEvent.title,
+        description: '',
+        category: newEvent.category,
+        status: newEvent.status as 'published' | 'draft' | 'cancelled',
+        startDate: startDateTime,
+        endDate: endDateTime,
+        location: newEvent.location,
+        locationName: newEvent.location,
+        isFree: true,
+        maxAttendees: newEvent.maxAttendees ? parseInt(newEvent.maxAttendees) : undefined,
+      };
 
-        if (newEvent.frequency === 'weekly') {
-          dateObj.setDate(dateObj.getDate() + (i * 7));
-        } else if (newEvent.frequency === 'daily') {
-          dateObj.setDate(dateObj.getDate() + i);
-        }
+      let createdEvents: Event[];
 
-        const dateStr = dateObj.toISOString().split('T')[0];
-        const startDateTime = combineDateAndTime(dateStr, newEvent.time);
-        const endDateTime = combineDateAndTime(dateStr, newEvent.time);
-
-        eventsToCreate.push({
-          title: newEvent.title,
-          description: '',
-          category: newEvent.category,
-          status: newEvent.status as 'published' | 'draft' | 'cancelled',
-          startDate: startDateTime,
-          endDate: endDateTime,
-          location: newEvent.location,
-          locationName: newEvent.location,
-          isFree: true,
-          maxAttendees: newEvent.maxAttendees ? parseInt(newEvent.maxAttendees) : undefined,
-        });
+      if (newEvent.frequency !== 'none') {
+        // Use createRecurringEvents for linked recurring events
+        const repeatCount = parseInt(newEvent.repeatCount) || 1;
+        createdEvents = await createRecurringEvents(
+          baseEventData,
+          newEvent.frequency as 'daily' | 'weekly',
+          repeatCount
+        );
+      } else {
+        // Single event creation
+        const created = await createEvent(baseEventData);
+        createdEvents = [created];
       }
 
-      // Create all events sequentially
-      const createdEvents: Event[] = [];
-      for (const eventData of eventsToCreate) {
-        const created = await createEvent(eventData);
-        createdEvents.push(created);
-      }
-
-      // Update local state adding all new events
       setEvents(prevEvents => [...prevEvents, ...createdEvents]);
 
       setIsCreateModalOpen(false);
@@ -191,18 +184,33 @@ const EventCalendar = () => {
     }
   };
 
-  const handleDeleteEvent = async (eventId: string, eventTitle: string) => {
-    const confirmDelete = window.confirm(
-      `¿Estás seguro de que deseas eliminar el evento "${eventTitle}"? Esta acción no se puede deshacer.`
-    );
+  const handleDeleteEvent = async (eventId: string, eventTitle: string, recurrenceGroupId?: string) => {
+    let deleteAll = false;
 
-    if (!confirmDelete) return;
+    if (recurrenceGroupId) {
+      deleteAll = window.confirm(
+        `Este evento es parte de una serie recurrente. ¿Deseas eliminar TODOS los eventos de la serie?\n\n` +
+        `Haz clic en "Aceptar" para eliminar todos, o "Cancelar" para eliminar solo este evento.`
+      );
+    }
+
+    if (!deleteAll) {
+      const confirmDelete = window.confirm(
+        `¿Estás seguro de que deseas eliminar el evento "${eventTitle}"? Esta acción no se puede deshacer.`
+      );
+      if (!confirmDelete) return;
+    }
 
     try {
-      await deleteEvent(eventId);
-      // Update local state by removing the deleted event
-      setEvents(prevEvents => prevEvents.filter(e => e.id !== eventId));
-      alert('Evento eliminado correctamente');
+      if (deleteAll && recurrenceGroupId) {
+        await deleteEventGroup(recurrenceGroupId);
+        setEvents(prevEvents => prevEvents.filter(e => e.recurrenceGroupId !== recurrenceGroupId));
+        alert('Todos los eventos de la serie han sido eliminados');
+      } else {
+        await deleteEvent(eventId);
+        setEvents(prevEvents => prevEvents.filter(e => e.id !== eventId));
+        alert('Evento eliminado correctamente');
+      }
     } catch (error) {
       console.error('Error deleting event:', error);
       alert('Error al eliminar el evento. Por favor, intenta de nuevo.');
@@ -358,6 +366,13 @@ const EventCalendar = () => {
                   </div>
                   <h3 className="text-lg font-semibold text-white">{event.title}</h3>
 
+                  {event.recurrenceGroupId && (
+                    <div className="flex items-center gap-1 text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded w-fit">
+                      <RefreshCw className="w-3 h-3" />
+                      Evento {(event.recurrenceIndex || 0) + 1} de {event.recurrenceCount || '?'}
+                    </div>
+                  )}
+
                   <div className="space-y-2 text-sm text-gray-400 pt-2 border-t border-white/5">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-gray-500" />
@@ -381,7 +396,7 @@ const EventCalendar = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDeleteEvent(event.id, event.title)}
+                      onClick={() => handleDeleteEvent(event.id, event.title, event.recurrenceGroupId)}
                       className="border-red-500/50 text-red-400 hover:bg-red-500/10"
                     >
                       <Trash2 className="w-4 h-4" />
