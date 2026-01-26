@@ -598,6 +598,8 @@ export interface Character {
   abv?: string;
   /** Beer type */
   tipo?: string;
+  /** Google Maps URL */
+  googleMapsUrl?: string;
   /** If the character is active */
   isActive: boolean;
   /** Creation timestamp */

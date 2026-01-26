@@ -32,6 +32,7 @@ export interface SupabaseCharacter {
   signature_abv?: string;
   abv?: string;
   tipo?: string;
+  google_maps_url?: string;
   is_active: boolean;
   created_at: string;
 }
@@ -65,6 +66,7 @@ function mapSupabaseToCharacter(supabaseCharacter: SupabaseCharacter): Character
     signatureAbv: supabaseCharacter.signature_abv,
     abv: supabaseCharacter.abv,
     tipo: supabaseCharacter.tipo,
+    googleMapsUrl: supabaseCharacter.google_maps_url,
     isActive: supabaseCharacter.is_active,
     createdAt: supabaseCharacter.created_at,
     // Campos legacy para compatibilidad
@@ -101,6 +103,7 @@ function mapCharacterToSupabase(character: Partial<Character>): Partial<Supabase
     signature_abv: character.signatureAbv,
     abv: character.abv,
     tipo: character.tipo,
+    google_maps_url: character.googleMapsUrl,
     is_active: character.isActive ?? true,
   };
 }
