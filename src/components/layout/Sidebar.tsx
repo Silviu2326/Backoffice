@@ -18,7 +18,8 @@ import {
   Menu,
   Image as ImageIcon,
   Bell,
-  Cat
+  Cat,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -53,6 +54,7 @@ const navItems = [
   { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
   { name: 'Notificaciones', path: '/admin/notifications', icon: Bell },
   { name: 'CRM Clientes', path: '/admin/crm/customers', icon: Users },
+  { name: 'Registros Usuarios', path: '/admin/crm/user-records', icon: ClipboardList },
   { name: 'Pedidos', path: '/admin/orders', icon: ShoppingCart },
   { name: 'Productos', path: '/admin/products', icon: Package },
   { name: 'Tiendas', path: '/admin/retail', icon: Store },

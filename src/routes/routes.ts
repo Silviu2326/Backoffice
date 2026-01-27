@@ -19,6 +19,7 @@ import GlobalSettings from '../pages/settings/GlobalSettings';
 import AuditLogViewer from '../pages/settings/AuditLogViewer';
 import { CustomerList } from '../pages/crm/CustomerList';
 import CustomerDetail from '../pages/crm/CustomerDetail';
+import UserRecords from '../pages/crm/UserRecords';
 import OrderDetail from '../pages/orders/OrderDetail';
 import { RulesConfig } from '../pages/loyalty/RulesConfig';
 import GamificationDashboard from '../pages/loyalty/GamificationDashboard';
@@ -39,6 +40,7 @@ export const routes: RouteConfig[] = [
   { path: '/admin/notifications', component: Notifications, title: 'Notificaciones' },
   { path: '/admin/crm/customers', component: CustomerList, title: 'Clientes' },
   { path: '/admin/crm/customers/:id', component: CustomerDetail, title: 'Ficha de Cliente' },
+  { path: '/admin/crm/user-records', component: UserRecords, title: 'Registros de Usuarios' },
   { path: '/admin/orders', component: OrderList, title: 'Pedidos' },
   { path: '/admin/orders/:id', component: OrderDetail, title: 'Detalle de Pedido' },
   { path: '/admin/products', component: ProductList, title: 'Productos' },
