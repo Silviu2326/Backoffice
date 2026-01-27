@@ -19,7 +19,8 @@ import {
   Image as ImageIcon,
   Bell,
   Cat,
-  ClipboardList
+  ClipboardList,
+  MessageSquareWarning
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
@@ -66,6 +67,7 @@ const navItems = [
   { name: 'Tabs de Navegación', path: '/admin/marketing/tabs', icon: Menu },
   { name: 'Navegación App', path: '/admin/settings/navigation', icon: Menu },
   { name: 'Mr. Cool Cat', path: '/admin/mrcoolcat', icon: Cat },
+  { name: 'Moderacion Muro', path: '/admin/moderation/community', icon: MessageSquareWarning },
 ];
 
 interface SidebarProps {

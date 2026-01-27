@@ -15,6 +15,7 @@ import FeaturedProductManager from '../pages/marketing/FeaturedProductManager';
 import BannerManager from '../pages/marketing/BannerManager';
 import TabManager from '../pages/marketing/TabManager';
 import ReviewInbox from '../pages/moderation/ReviewInbox';
+import CommunityPosts from '../pages/moderation/CommunityPosts';
 import GlobalSettings from '../pages/settings/GlobalSettings';
 import AuditLogViewer from '../pages/settings/AuditLogViewer';
 import { CustomerList } from '../pages/crm/CustomerList';
@@ -62,6 +63,7 @@ export const routes: RouteConfig[] = [
   { path: '/admin/marketing/tabs', component: TabManager, title: 'Tabs de Navegación' },
   { path: '/admin/marketing/featured', component: FeaturedProductManager, title: 'Productos Destacados' },
   { path: '/admin/moderation', component: ReviewInbox, title: 'Moderación' },
+  { path: '/admin/moderation/community', component: CommunityPosts, title: 'Moderación del Muro' },
   { path: '/admin/settings', component: GlobalSettings, title: 'Configuración' },
   { path: '/admin/settings/audit', component: AuditLogViewer, title: 'Auditoría' },
   { path: '/admin/settings/navigation', component: NavigationManager, title: 'Navegación de la App' },

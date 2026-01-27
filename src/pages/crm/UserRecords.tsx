@@ -13,15 +13,19 @@ interface UserProfile {
   phone: string | null;
 }
 
+const PAGE_SIZE = 10;
+
 const UserRecords: React.FC = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
       setError(null);
+      setCurrentPage(1);
 
       const { data, error } = await supabase
         .from('user_profiles')
@@ -150,12 +154,12 @@ const UserRecords: React.FC = () => {
         ) : (
           <DataTable
             columns={columns}
-            data={users}
+            data={users.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)}
             pagination={{
-              page: 1,
-              pageSize: 10,
+              page: currentPage,
+              pageSize: PAGE_SIZE,
               total: users.length,
-              onPageChange: () => {},
+              onPageChange: setCurrentPage,
             }}
           />
         )}
