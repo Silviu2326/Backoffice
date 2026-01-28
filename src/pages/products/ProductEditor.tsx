@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Languages } from 'lucide-react';
 import Button from '../../components/ui/Button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { Card } from '../../components/ui/Card';
@@ -13,12 +13,14 @@ import { getProductById, updateProduct, updateFeaturedConfig } from '../../featu
 import { getProductVariants, createVariants, updateVariant } from '../../features/products/api/productVariantService';
 import { getCharacters } from '../../features/brand/api/characterService';
 import { Product, ProductStatus, InventoryType, Character } from '../../types/core';
+import { useLanguage } from '../../context/LanguageContext';
 
 const ProductEditor: React.FC = () => {
+  const { t } = useLanguage();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const productId = searchParams.get('id');
-  
+
   const [product, setProduct] = useState<Product | null>(null);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -27,10 +29,13 @@ const ProductEditor: React.FC = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    nameEn: '',
     sku: '',
     slug: '',
     description: '',
+    descriptionEn: '',
     richDescription: '',
+    richDescriptionEn: '',
     basePrice: '',
     category: '',
     status: 'DRAFT' as ProductStatus,
@@ -84,10 +89,13 @@ const ProductEditor: React.FC = () => {
         setProduct(fetchedProduct);
         setFormData({
           name: fetchedProduct.name,
+          nameEn: fetchedProduct.nameEn || '',
           sku: fetchedProduct.sku,
           slug: fetchedProduct.slug,
           description: fetchedProduct.description,
+          descriptionEn: fetchedProduct.descriptionEn || '',
           richDescription: fetchedProduct.richDescription || '',
+          richDescriptionEn: fetchedProduct.richDescriptionEn || '',
           basePrice: fetchedProduct.basePrice.toString(),
           category: fetchedProduct.category,
           status: fetchedProduct.status,
@@ -135,10 +143,13 @@ const ProductEditor: React.FC = () => {
       
       const updates: Partial<Product> = {
         name: formData.name,
+        nameEn: formData.nameEn || undefined,
         sku: formData.sku,
         slug: formData.slug || formData.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
         description: formData.description,
+        descriptionEn: formData.descriptionEn || undefined,
         richDescription: formData.richDescription,
+        richDescriptionEn: formData.richDescriptionEn || undefined,
         basePrice: parseFloat(formData.basePrice) || 0,
         category: formData.category,
         status: formData.status,
@@ -250,43 +261,32 @@ const ProductEditor: React.FC = () => {
           </TabsList>
           <TabsContent value="general">
             <Card className="p-4 bg-[#2C2C2C] border-white/10">
-              <h2 className="text-lg font-medium mb-4 text-white">Información General</h2>
+              <h2 className="text-lg font-medium mb-4 text-white">{t('createProduct.basicInfo')}</h2>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="productName" className="block text-sm font-medium text-text-secondary mb-2">Nombre del Producto</label>
-                  <Input 
-                    id="productName" 
-                    type="text" 
-                    placeholder="Nombre del Producto" 
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="mt-1 block w-full" 
-                  />
-                </div>
-                <div>
                   <label htmlFor="productSku" className="block text-sm font-medium text-text-secondary mb-2">SKU</label>
-                  <Input 
-                    id="productSku" 
-                    type="text" 
-                    placeholder="SKU" 
+                  <Input
+                    id="productSku"
+                    type="text"
+                    placeholder="SKU"
                     value={formData.sku}
                     onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    className="mt-1 block w-full" 
+                    className="mt-1 block w-full"
                   />
                 </div>
                 <div>
                   <label htmlFor="productSlug" className="block text-sm font-medium text-text-secondary mb-2">Slug</label>
-                  <Input 
-                    id="productSlug" 
-                    type="text" 
-                    placeholder="url-amigable" 
+                  <Input
+                    id="productSlug"
+                    type="text"
+                    placeholder="url-amigable"
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    className="mt-1 block w-full" 
+                    className="mt-1 block w-full"
                   />
                 </div>
                 <div>
-                  <label htmlFor="productPrice" className="block text-sm font-medium text-text-secondary mb-2">Precio Base (€)</label>
+                  <label htmlFor="productPrice" className="block text-sm font-medium text-text-secondary mb-2">{t('createProduct.basePrice')}</label>
                   <Input
                     id="productPrice"
                     type="number"
@@ -298,34 +298,34 @@ const ProductEditor: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="productCategory" className="block text-sm font-medium text-text-secondary mb-2">Categoría</label>
+                  <label htmlFor="productCategory" className="block text-sm font-medium text-text-secondary mb-2">{t('createProduct.category')}</label>
                   <Input
                     id="productCategory"
                     type="text"
-                    placeholder="Categoría"
+                    placeholder={t('createProduct.category')}
                     value={formData.category}
                     onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                     className="mt-1 block w-full"
                   />
                 </div>
                 <div>
-                  <label htmlFor="productStatus" className="block text-sm font-medium text-text-secondary mb-2">Estado</label>
+                  <label htmlFor="productStatus" className="block text-sm font-medium text-text-secondary mb-2">{t('createProduct.status')}</label>
                   <select
                     id="productStatus"
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value as ProductStatus })}
                     className="mt-1 block w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent"
                   >
-                    <option value="DRAFT">Borrador</option>
-                    <option value="PUBLISHED">Publicado</option>
-                    <option value="ARCHIVED">Archivado</option>
+                    <option value="DRAFT">{t('productStatus.draft')}</option>
+                    <option value="PUBLISHED">{t('productStatus.published')}</option>
+                    <option value="ARCHIVED">{t('productStatus.archived')}</option>
                   </select>
                 </div>
-                <div className="col-span-2">
-                  <label htmlFor="productCharacter" className="block text-sm font-medium text-text-secondary mb-2">Personaje Relacionado</label>
+                <div>
+                  <label htmlFor="productCharacter" className="block text-sm font-medium text-text-secondary mb-2">{t('createProduct.relatedCharacter')}</label>
                   <Select
                     options={[
-                      { value: '', label: 'Sin personaje (opcional)' },
+                      { value: '', label: t('createProduct.noCharacter') },
                       ...characters.map((character: Character) => ({
                         value: character.id,
                         label: character.name,
@@ -333,48 +333,143 @@ const ProductEditor: React.FC = () => {
                     ]}
                     value={formData.characterId}
                     onChange={(value) => setFormData({ ...formData, characterId: value })}
-                    placeholder="Seleccionar personaje"
-                  />
-                  {formData.characterId && (
-                    <div className="mt-3 p-3 bg-[#2C2C2C] rounded-lg border border-white/10">
-                      <div className="flex items-center gap-3">
-                        {(() => {
-                          const selectedCharacter = characters.find(
-                            (c: Character) => c.id === formData.characterId
-                          );
-                          return selectedCharacter ? (
-                            <>
-                              <div
-                                className="w-8 h-8 rounded-full border-2 border-white/20 flex-shrink-0"
-                                style={{ backgroundColor: selectedCharacter.accentColor || selectedCharacter.color }}
-                              />
-                              <div>
-                                <p className="text-sm font-medium text-white">
-                                  {selectedCharacter.name}
-                                </p>
-                                <p className="text-xs text-text-secondary">
-                                  {selectedCharacter.role}
-                                </p>
-                              </div>
-                            </>
-                          ) : null;
-                        })()}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <div className="col-span-2">
-                  <label htmlFor="productDescription" className="block text-sm font-medium text-text-secondary mb-2">Descripción</label>
-                  <textarea
-                    id="productDescription"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descripción del producto..."
-                    rows={4}
-                    className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                    placeholder={t('createProduct.relatedCharacter')}
                   />
                 </div>
               </div>
+
+              {/* Translations Section */}
+              <div className="mt-8 pt-6 border-t border-white/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <Languages className="w-5 h-5 text-brand-orange" />
+                  <h3 className="text-lg font-medium text-white">Traducciones / Translations</h3>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Spanish Column */}
+                  <div className="space-y-4 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">🇪🇸</span>
+                      <span className="text-sm font-semibold text-white">Español</span>
+                    </div>
+                    <div>
+                      <label htmlFor="productName" className="block text-sm font-medium text-text-secondary mb-2">
+                        Nombre del Producto
+                      </label>
+                      <Input
+                        id="productName"
+                        type="text"
+                        placeholder="Nombre del Producto"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="block w-full"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="productDescription" className="block text-sm font-medium text-text-secondary mb-2">
+                        Descripción
+                      </label>
+                      <textarea
+                        id="productDescription"
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Descripción del producto..."
+                        rows={4}
+                        className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="productRichDescription" className="block text-sm font-medium text-text-secondary mb-2">
+                        Descripción Detallada (HTML)
+                      </label>
+                      <textarea
+                        id="productRichDescription"
+                        value={formData.richDescription}
+                        onChange={(e) => setFormData({ ...formData, richDescription: e.target.value })}
+                        placeholder="<p>Descripción detallada con formato HTML...</p>"
+                        rows={6}
+                        className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* English Column */}
+                  <div className="space-y-4 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">🇬🇧</span>
+                      <span className="text-sm font-semibold text-white">English</span>
+                    </div>
+                    <div>
+                      <label htmlFor="productNameEn" className="block text-sm font-medium text-text-secondary mb-2">
+                        Product Name
+                      </label>
+                      <Input
+                        id="productNameEn"
+                        type="text"
+                        placeholder="Product Name"
+                        value={formData.nameEn}
+                        onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                        className="block w-full"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="productDescriptionEn" className="block text-sm font-medium text-text-secondary mb-2">
+                        Description
+                      </label>
+                      <textarea
+                        id="productDescriptionEn"
+                        value={formData.descriptionEn}
+                        onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                        placeholder="Product description..."
+                        rows={4}
+                        className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="productRichDescriptionEn" className="block text-sm font-medium text-text-secondary mb-2">
+                        Detailed Description (HTML)
+                      </label>
+                      <textarea
+                        id="productRichDescriptionEn"
+                        value={formData.richDescriptionEn}
+                        onChange={(e) => setFormData({ ...formData, richDescriptionEn: e.target.value })}
+                        placeholder="<p>Detailed description with HTML formatting...</p>"
+                        rows={6}
+                        className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Character Preview */}
+              {formData.characterId && (
+                <div className="mt-4 p-3 bg-[#1A1A1A] rounded-lg border border-white/10">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const selectedCharacter = characters.find(
+                        (c: Character) => c.id === formData.characterId
+                      );
+                      return selectedCharacter ? (
+                        <>
+                          <div
+                            className="w-8 h-8 rounded-full border-2 border-white/20 flex-shrink-0"
+                            style={{ backgroundColor: selectedCharacter.accentColor || selectedCharacter.color }}
+                          />
+                          <div>
+                            <p className="text-sm font-medium text-white">
+                              {selectedCharacter.name}
+                            </p>
+                            <p className="text-xs text-text-secondary">
+                              {selectedCharacter.role}
+                            </p>
+                          </div>
+                        </>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+              )}
             </Card>
           </TabsContent>
           <TabsContent value="media">

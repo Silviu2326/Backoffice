@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Calendar, MapPin, Save, ArrowLeft, DollarSign, Users, Loader2, Tag, X, Plus, Trash2, RefreshCw } from 'lucide-react';
+import { Calendar, MapPin, Save, ArrowLeft, DollarSign, Users, Loader2, Tag, X, Plus, Trash2, RefreshCw, Languages } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -55,7 +55,9 @@ const EventEditor = () => {
 
   const [formData, setFormData] = useState({
     title: '',
+    titleEn: '',
     description: '',
+    descriptionEn: '',
     coverImageUrl: '',
     heroImage: '',
     category: 'Cata',
@@ -121,7 +123,9 @@ const EventEditor = () => {
         setEvent(fetchedEvent);
         setFormData({
           title: fetchedEvent.title,
+          titleEn: fetchedEvent.titleEn || '',
           description: fetchedEvent.description || '',
+          descriptionEn: fetchedEvent.descriptionEn || '',
           coverImageUrl: fetchedEvent.coverImageUrl || '',
           heroImage: fetchedEvent.heroImage || '',
           category: fetchedEvent.category || 'Cata',
@@ -240,7 +244,9 @@ const EventEditor = () => {
 
   const buildEventData = (): Partial<Event> => ({
     title: formData.title,
+    titleEn: formData.titleEn || undefined,
     description: formData.description || undefined,
+    descriptionEn: formData.descriptionEn || undefined,
     coverImageUrl: formData.coverImageUrl || undefined,
     heroImage: formData.heroImage || undefined,
     category: formData.category || undefined,
@@ -633,14 +639,38 @@ const EventEditor = () => {
                 <Calendar className="w-5 h-5 text-brand-orange" />
                 <h2 className="text-lg font-semibold text-white">Información Básica</h2>
               </div>
-              
-              <Input
-                label="Título del Evento *"
-                name="title"
-                placeholder="Ej. Cata de Cervezas Artesanales"
-                value={formData.title}
-                onChange={handleInputChange}
-              />
+
+              {/* Title with translations */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-medium text-gray-300">Título del Evento *</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <span>🇪🇸</span> Español
+                    </label>
+                    <Input
+                      name="title"
+                      placeholder="Ej. Cata de Cervezas Artesanales"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <span>🇬🇧</span> English
+                    </label>
+                    <Input
+                      name="titleEn"
+                      placeholder="E.g. Craft Beer Tasting"
+                      value={formData.titleEn}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
@@ -681,18 +711,40 @@ const EventEditor = () => {
                 onChange={(val) => handleSelectChange('category', val)}
               />
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Descripción
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Describe el evento..."
-                  rows={4}
-                  className="w-full px-4 py-2 bg-[#252525] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-orange/50"
-                />
+              {/* Description with translations */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-blue-400" />
+                  <span className="text-sm font-medium text-gray-300">Descripción</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <span>🇪🇸</span> Español
+                    </label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Describe el evento..."
+                      rows={4}
+                      className="w-full px-4 py-2 bg-[#252525] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-orange/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1 flex items-center gap-1">
+                      <span>🇬🇧</span> English
+                    </label>
+                    <textarea
+                      name="descriptionEn"
+                      value={formData.descriptionEn}
+                      onChange={(e) => setFormData(prev => ({ ...prev, descriptionEn: e.target.value }))}
+                      placeholder="Describe the event..."
+                      rows={4}
+                      className="w-full px-4 py-2 bg-[#252525] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-orange/50"
+                    />
+                  </div>
+                </div>
               </div>
 
               <Select

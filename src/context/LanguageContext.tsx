@@ -1,0 +1,588 @@
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+type Language = 'es' | 'en';
+
+interface LanguageContextType {
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: (key: string) => string;
+}
+
+const translations: Record<Language, Record<string, string>> = {
+  es: {
+    // Header
+    'header.home': 'Inicio',
+    'header.profile': 'Perfil',
+    'header.settings': 'Configuraci\u00f3n',
+    'header.logout': 'Cerrar Sesi\u00f3n',
+
+    // Breadcrumbs
+    'breadcrumb.crm': 'CRM Clientes',
+    'breadcrumb.orders': 'Pedidos',
+    'breadcrumb.products': 'Productos',
+    'breadcrumb.stores': 'Tiendas',
+    'breadcrumb.characters': 'Personajes',
+    'breadcrumb.events': 'Eventos',
+    'breadcrumb.gamification': 'Gamificaci\u00f3n',
+    'breadcrumb.marketing': 'Marketing',
+    'breadcrumb.moderation': 'Moderaci\u00f3n',
+    'breadcrumb.settings': 'Configuraci\u00f3n',
+
+    // Sidebar
+    'sidebar.dashboard': 'Dashboard',
+    'sidebar.notifications': 'Notificaciones',
+    'sidebar.crmCustomers': 'CRM Clientes',
+    'sidebar.userRecords': 'Registros Usuarios',
+    'sidebar.orders': 'Pedidos',
+    'sidebar.products': 'Productos',
+    'sidebar.stores': 'Tiendas',
+    'sidebar.characters': 'Personajes',
+    'sidebar.events': 'Eventos',
+    'sidebar.gamification': 'Gamificaci\u00f3n',
+    'sidebar.featuredProducts': 'Productos Destacados',
+    'sidebar.appBanners': 'Banners App',
+    'sidebar.navTabs': 'Tabs de Navegaci\u00f3n',
+    'sidebar.appNavigation': 'Navegaci\u00f3n App',
+    'sidebar.mrCoolCat': 'Mr. Cool Cat',
+    'sidebar.wallModeration': 'Moderacion Muro',
+    'sidebar.logout': 'Cerrar Sesi\u00f3n',
+
+    // Language
+    'language.spanish': 'Espa\u00f1ol',
+    'language.english': 'Ingl\u00e9s',
+
+    // Common
+    'common.loading': 'Cargando...',
+    'common.save': 'Guardar',
+    'common.cancel': 'Cancelar',
+    'common.delete': 'Eliminar',
+    'common.edit': 'Editar',
+    'common.create': 'Crear',
+    'common.search': 'Buscar',
+    'common.filter': 'Filtrar',
+    'common.actions': 'Acciones',
+    'common.status': 'Estado',
+    'common.date': 'Fecha',
+    'common.name': 'Nombre',
+    'common.email': 'Email',
+    'common.phone': 'Tel\u00e9fono',
+    'common.address': 'Direcci\u00f3n',
+    'common.city': 'Ciudad',
+    'common.country': 'Pa\u00eds',
+    'common.price': 'Precio',
+    'common.total': 'Total',
+    'common.quantity': 'Cantidad',
+    'common.description': 'Descripci\u00f3n',
+    'common.category': 'Categor\u00eda',
+    'common.image': 'Imagen',
+    'common.active': 'Activo',
+    'common.inactive': 'Inactivo',
+    'common.yes': 'S\u00ed',
+    'common.no': 'No',
+    'common.all': 'Todos',
+    'common.none': 'Ninguno',
+    'common.close': 'Cerrar',
+    'common.view': 'Ver',
+    'common.details': 'Detalles',
+    'common.back': 'Volver',
+    'common.next': 'Siguiente',
+    'common.previous': 'Anterior',
+    'common.confirm': 'Confirmar',
+    'common.online': 'En L\u00ednea',
+
+    // Dashboard
+    'dashboard.title': 'Dashboard Ejecutivo',
+    'dashboard.subtitle': 'Resumen operativo y financiero en tiempo real.',
+    'dashboard.totalRevenue': 'Ingresos Totales',
+    'dashboard.averageOrder': 'Ticket Medio (AOV)',
+    'dashboard.totalOrders': 'Pedidos Totales',
+    'dashboard.vsPreviousMonth': 'vs mes anterior',
+    'dashboard.loadingStats': 'Cargando estad\u00edsticas...',
+    'dashboard.thisMonth': 'Este Mes',
+
+    // Login
+    'login.welcome': 'Bienvenido de nuevo',
+    'login.email': 'Email',
+    'login.password': 'Contrase\u00f1a',
+    'login.submit': 'Iniciar Sesi\u00f3n',
+    'login.helpText': '\u00bfProblemas de acceso? Contacta a IT',
+
+    // Customers
+    'customers.title': 'Clientes',
+    'customers.newCustomer': 'Nuevo Cliente',
+    'customers.loading': 'Cargando clientes...',
+    'customers.error': 'Error al cargar los clientes. Por favor, int\u00e9ntalo de nuevo.',
+    'customers.customer': 'Cliente',
+    'customers.phone': 'Tel\u00e9fono',
+    'customers.createdAt': 'Creado en',
+    'customers.status': 'Estado',
+    'customers.actions': 'Acciones',
+    'customers.viewCard': 'Ver Ficha',
+    'customers.noAvatar': 'Sin avatar',
+    'customers.points': 'Puntos',
+    'customers.createTitle': 'Crear Nuevo Cliente',
+    'customers.fullName': 'Nombre Completo',
+    'customers.avatar': 'Avatar',
+    'customers.selectedAvatar': 'Avatar seleccionado',
+    'customers.createButton': 'Crear Cliente',
+    'customers.confirmDelete': '\u00bfEst\u00e1s seguro de que deseas eliminar este cliente? Esta acci\u00f3n no se puede deshacer.',
+    'customers.deleteError': 'Error al eliminar el cliente',
+    'customers.createSuccess': 'Cliente creado correctamente',
+    'customers.requiredFields': 'El nombre y el email son obligatorios',
+
+    // Customer Status
+    'status.active': 'Activo',
+    'status.inactive': 'Inactivo',
+    'status.lead': 'Lead',
+
+    // Orders
+    'orders.title': 'Pedidos',
+    'orders.subtitle': 'Gestiona y realiza el seguimiento de todos los pedidos',
+    'orders.createOrder': 'Crear Pedido',
+    'orders.orderId': 'ID Pedido',
+    'orders.customer': 'Cliente',
+    'orders.date': 'Fecha',
+    'orders.total': 'Total',
+    'orders.status': 'Estado',
+    'orders.stripePayment': 'Pago Stripe',
+    'orders.shippingMethod': 'M\u00e9todo Env\u00edo',
+    'orders.action': 'Acci\u00f3n',
+    'orders.viewDetail': 'Ver Detalle',
+    'orders.all': 'Todos',
+    'orders.pending': 'Pendientes',
+    'orders.inProgress': 'En Proceso',
+    'orders.completed': 'Completados',
+    'orders.incidents': 'Incidencias',
+    'orders.createTitle': 'Crear Nuevo Pedido',
+    'orders.selectCustomer': 'Seleccionar cliente...',
+    'orders.estimatedTotal': 'Total estimado',
+    'orders.initialStatus': 'Estado inicial',
+    'orders.createButton': 'Crear Pedido',
+    'orders.orderItems': 'Art\u00edculos del Pedido',
+    'orders.shippingAddress': 'Direcci\u00f3n de Env\u00edo',
+    'orders.billingAddress': 'Direcci\u00f3n de Facturaci\u00f3n',
+    'orders.selectCustomerError': 'Por favor selecciona un cliente',
+    'orders.createSuccess': 'Pedido creado correctamente',
+    'orders.createError': 'Error al crear el pedido',
+
+    // Order Status
+    'orderStatus.pendingPayment': 'Pendiente Pago',
+    'orderStatus.paid': 'Pagado',
+    'orderStatus.preparing': 'Preparando',
+    'orderStatus.readyToShip': 'Listo para Enviar',
+    'orderStatus.shipped': 'Enviado',
+    'orderStatus.delivered': 'Entregado',
+    'orderStatus.returned': 'Devuelto',
+    'orderStatus.cancelled': 'Cancelado',
+
+    // Payment Status
+    'paymentStatus.noPayment': 'Sin Pago',
+    'paymentStatus.succeeded': 'Pagado',
+    'paymentStatus.processing': 'Procesando',
+    'paymentStatus.requiresAction': 'Requiere Acci\u00f3n',
+    'paymentStatus.canceled': 'Cancelado',
+
+    // Shipping Methods
+    'shipping.home': 'A Domicilio',
+    'shipping.pickup': 'Recogida',
+    'shipping.standard': 'Est\u00e1ndar',
+
+    // Products
+    'products.title': 'Productos',
+    'products.subtitle': 'Gestiona tu cat\u00e1logo de productos',
+    'products.newProduct': 'Nuevo Producto',
+    'products.searchProducts': 'Buscar productos...',
+    'products.allCategories': 'Todas las categor\u00edas',
+    'products.allStatus': 'Todos los estados',
+    'products.inStock': 'En Stock',
+    'products.lowStock': 'Stock Bajo',
+    'products.outOfStock': 'Sin Stock',
+    'products.loading': 'Cargando productos...',
+    'products.error': 'Error al cargar los productos. Por favor, intenta de nuevo.',
+    'products.image': 'Imagen',
+    'products.name': 'Nombre',
+    'products.category': 'Categor\u00eda',
+    'products.price': 'Precio',
+    'products.stock': 'Stock',
+    'products.status': 'Estado',
+    'products.actions': 'Acciones',
+    'products.viewCard': 'Ver Ficha',
+    'products.beerOfMonth': 'Cerveza del Mes',
+    'products.markAsMonth': 'Marcar del Mes',
+    'products.listView': 'Vista Lista',
+    'products.gridView': 'Vista Cuadr\u00edcula',
+    'products.units': 'uds',
+
+    // Product Status
+    'productStatus.published': 'Publicado',
+    'productStatus.draft': 'Borrador',
+    'productStatus.archived': 'Archivado',
+
+    // Create Product Modal
+    'createProduct.title': 'Nueva Cerveza',
+    'createProduct.subtitle': 'Crea un nuevo producto de cerveza artesanal',
+    'createProduct.basicInfo': 'Informaci\u00f3n B\u00e1sica',
+    'createProduct.beerName': 'Nombre de la Cerveza',
+    'createProduct.sku': 'SKU',
+    'createProduct.classification': 'Clasificaci\u00f3n',
+    'createProduct.category': 'Categor\u00eda',
+    'createProduct.selectCategory': 'Seleccionar categor\u00eda...',
+    'createProduct.beerType': 'Tipo de Cerveza',
+    'createProduct.brandCharacter': 'Personaje de la Marca',
+    'createProduct.relatedCharacter': 'Personaje Relacionado',
+    'createProduct.noCharacter': 'Sin personaje (opcional)',
+    'createProduct.characterHelp': 'Opcional: Asocia esta cerveza con un personaje de la marca para mostrar en la app m\u00f3vil',
+    'createProduct.technicalSpecs': 'Caracter\u00edsticas T\u00e9cnicas',
+    'createProduct.abv': 'ABV (%)',
+    'createProduct.abvHelp': 'Alcohol By Volume',
+    'createProduct.ibu': 'IBU',
+    'createProduct.ibuHelp': 'International Bitterness Units',
+    'createProduct.srm': 'SRM',
+    'createProduct.srmHelp': 'Standard Reference Method (Color)',
+    'createProduct.priceAndStatus': 'Precio y Estado',
+    'createProduct.basePrice': 'Precio Base (\u20ac)',
+    'createProduct.status': 'Estado',
+    'createProduct.description': 'Descripci\u00f3n',
+    'createProduct.beerDescription': 'Descripci\u00f3n de la Cerveza',
+    'createProduct.descriptionPlaceholder': 'Describe las caracter\u00edsticas, sabor, aroma y experiencia de esta cerveza...',
+    'createProduct.tags': 'Etiquetas',
+    'createProduct.tagsLabel': 'Tags (selecciona m\u00faltiples)',
+    'createProduct.tagsHelp': 'Mant\u00e9n presionado Ctrl (Cmd en Mac) para seleccionar m\u00faltiples opciones',
+    'createProduct.required': 'obligatorio',
+    'createProduct.createButton': 'Crear Cerveza',
+    'createProduct.creating': 'Creando...',
+    'createProduct.requiredFields': 'Por favor completa los campos obligatorios: Nombre, SKU y Categor\u00eda',
+    'createProduct.createError': 'Error al crear el producto',
+    'createProduct.removeBeerOfMonth': '\u00bfQuitar como Cerveza del Mes?',
+    'createProduct.beerOfMonthSuccess': 'ha sido marcada como Cerveza del Mes',
+    'createProduct.featuredError': 'Error al actualizar la configuraci\u00f3n destacada. Por favor, intenta de nuevo.',
+
+    // Product Tags
+    'tag.artesanal': 'Artesanal',
+    'tag.premium': 'Premium',
+    'tag.sinGluten': 'Sin Gluten',
+    'tag.edicionLimitada': 'Edici\u00f3n Limitada',
+    'tag.nuevoLanzamiento': 'Nuevo Lanzamiento',
+    'tag.bestseller': 'Bestseller',
+    'tag.premio': 'Premio',
+    'tag.local': 'Local',
+    'tag.organico': 'Org\u00e1nico',
+    'tag.vegano': 'Vegano',
+
+    // Beer Categories
+    'beerCategory.ipa': 'IPA',
+    'beerCategory.lager': 'Lager',
+    'beerCategory.stout': 'Stout',
+    'beerCategory.ale': 'Ale',
+    'beerCategory.porter': 'Porter',
+    'beerCategory.pilsner': 'Pilsner',
+    'beerCategory.wheat': 'Wheat Beer',
+    'beerCategory.saison': 'Saison',
+    'beerCategory.bock': 'Bock',
+    'beerCategory.specialty': 'Especialidad',
+  },
+  en: {
+    // Header
+    'header.home': 'Home',
+    'header.profile': 'Profile',
+    'header.settings': 'Settings',
+    'header.logout': 'Sign Out',
+
+    // Breadcrumbs
+    'breadcrumb.crm': 'CRM Customers',
+    'breadcrumb.orders': 'Orders',
+    'breadcrumb.products': 'Products',
+    'breadcrumb.stores': 'Stores',
+    'breadcrumb.characters': 'Characters',
+    'breadcrumb.events': 'Events',
+    'breadcrumb.gamification': 'Gamification',
+    'breadcrumb.marketing': 'Marketing',
+    'breadcrumb.moderation': 'Moderation',
+    'breadcrumb.settings': 'Settings',
+
+    // Sidebar
+    'sidebar.dashboard': 'Dashboard',
+    'sidebar.notifications': 'Notifications',
+    'sidebar.crmCustomers': 'CRM Customers',
+    'sidebar.userRecords': 'User Records',
+    'sidebar.orders': 'Orders',
+    'sidebar.products': 'Products',
+    'sidebar.stores': 'Stores',
+    'sidebar.characters': 'Characters',
+    'sidebar.events': 'Events',
+    'sidebar.gamification': 'Gamification',
+    'sidebar.featuredProducts': 'Featured Products',
+    'sidebar.appBanners': 'App Banners',
+    'sidebar.navTabs': 'Navigation Tabs',
+    'sidebar.appNavigation': 'App Navigation',
+    'sidebar.mrCoolCat': 'Mr. Cool Cat',
+    'sidebar.wallModeration': 'Wall Moderation',
+    'sidebar.logout': 'Sign Out',
+
+    // Language
+    'language.spanish': 'Spanish',
+    'language.english': 'English',
+
+    // Common
+    'common.loading': 'Loading...',
+    'common.save': 'Save',
+    'common.cancel': 'Cancel',
+    'common.delete': 'Delete',
+    'common.edit': 'Edit',
+    'common.create': 'Create',
+    'common.search': 'Search',
+    'common.filter': 'Filter',
+    'common.actions': 'Actions',
+    'common.status': 'Status',
+    'common.date': 'Date',
+    'common.name': 'Name',
+    'common.email': 'Email',
+    'common.phone': 'Phone',
+    'common.address': 'Address',
+    'common.city': 'City',
+    'common.country': 'Country',
+    'common.price': 'Price',
+    'common.total': 'Total',
+    'common.quantity': 'Quantity',
+    'common.description': 'Description',
+    'common.category': 'Category',
+    'common.image': 'Image',
+    'common.active': 'Active',
+    'common.inactive': 'Inactive',
+    'common.yes': 'Yes',
+    'common.no': 'No',
+    'common.all': 'All',
+    'common.none': 'None',
+    'common.close': 'Close',
+    'common.view': 'View',
+    'common.details': 'Details',
+    'common.back': 'Back',
+    'common.next': 'Next',
+    'common.previous': 'Previous',
+    'common.confirm': 'Confirm',
+    'common.online': 'Online',
+
+    // Dashboard
+    'dashboard.title': 'Executive Dashboard',
+    'dashboard.subtitle': 'Real-time operational and financial summary.',
+    'dashboard.totalRevenue': 'Total Revenue',
+    'dashboard.averageOrder': 'Average Order Value (AOV)',
+    'dashboard.totalOrders': 'Total Orders',
+    'dashboard.vsPreviousMonth': 'vs previous month',
+    'dashboard.loadingStats': 'Loading statistics...',
+    'dashboard.thisMonth': 'This Month',
+
+    // Login
+    'login.welcome': 'Welcome back',
+    'login.email': 'Email',
+    'login.password': 'Password',
+    'login.submit': 'Sign In',
+    'login.helpText': 'Access problems? Contact IT',
+
+    // Customers
+    'customers.title': 'Customers',
+    'customers.newCustomer': 'New Customer',
+    'customers.loading': 'Loading customers...',
+    'customers.error': 'Error loading customers. Please try again.',
+    'customers.customer': 'Customer',
+    'customers.phone': 'Phone',
+    'customers.createdAt': 'Created at',
+    'customers.status': 'Status',
+    'customers.actions': 'Actions',
+    'customers.viewCard': 'View Card',
+    'customers.noAvatar': 'No avatar',
+    'customers.points': 'Points',
+    'customers.createTitle': 'Create New Customer',
+    'customers.fullName': 'Full Name',
+    'customers.avatar': 'Avatar',
+    'customers.selectedAvatar': 'Selected avatar',
+    'customers.createButton': 'Create Customer',
+    'customers.confirmDelete': 'Are you sure you want to delete this customer? This action cannot be undone.',
+    'customers.deleteError': 'Error deleting customer',
+    'customers.createSuccess': 'Customer created successfully',
+    'customers.requiredFields': 'Name and email are required',
+
+    // Customer Status
+    'status.active': 'Active',
+    'status.inactive': 'Inactive',
+    'status.lead': 'Lead',
+
+    // Orders
+    'orders.title': 'Orders',
+    'orders.subtitle': 'Manage and track all orders',
+    'orders.createOrder': 'Create Order',
+    'orders.orderId': 'Order ID',
+    'orders.customer': 'Customer',
+    'orders.date': 'Date',
+    'orders.total': 'Total',
+    'orders.status': 'Status',
+    'orders.stripePayment': 'Stripe Payment',
+    'orders.shippingMethod': 'Shipping Method',
+    'orders.action': 'Action',
+    'orders.viewDetail': 'View Detail',
+    'orders.all': 'All',
+    'orders.pending': 'Pending',
+    'orders.inProgress': 'In Progress',
+    'orders.completed': 'Completed',
+    'orders.incidents': 'Incidents',
+    'orders.createTitle': 'Create New Order',
+    'orders.selectCustomer': 'Select customer...',
+    'orders.estimatedTotal': 'Estimated total',
+    'orders.initialStatus': 'Initial status',
+    'orders.createButton': 'Create Order',
+    'orders.orderItems': 'Order Items',
+    'orders.shippingAddress': 'Shipping Address',
+    'orders.billingAddress': 'Billing Address',
+    'orders.selectCustomerError': 'Please select a customer',
+    'orders.createSuccess': 'Order created successfully',
+    'orders.createError': 'Error creating order',
+
+    // Order Status
+    'orderStatus.pendingPayment': 'Pending Payment',
+    'orderStatus.paid': 'Paid',
+    'orderStatus.preparing': 'Preparing',
+    'orderStatus.readyToShip': 'Ready to Ship',
+    'orderStatus.shipped': 'Shipped',
+    'orderStatus.delivered': 'Delivered',
+    'orderStatus.returned': 'Returned',
+    'orderStatus.cancelled': 'Cancelled',
+
+    // Payment Status
+    'paymentStatus.noPayment': 'No Payment',
+    'paymentStatus.succeeded': 'Paid',
+    'paymentStatus.processing': 'Processing',
+    'paymentStatus.requiresAction': 'Requires Action',
+    'paymentStatus.canceled': 'Canceled',
+
+    // Shipping Methods
+    'shipping.home': 'Home Delivery',
+    'shipping.pickup': 'Pickup',
+    'shipping.standard': 'Standard',
+
+    // Products
+    'products.title': 'Products',
+    'products.subtitle': 'Manage your product catalog',
+    'products.newProduct': 'New Product',
+    'products.searchProducts': 'Search products...',
+    'products.allCategories': 'All categories',
+    'products.allStatus': 'All status',
+    'products.inStock': 'In Stock',
+    'products.lowStock': 'Low Stock',
+    'products.outOfStock': 'Out of Stock',
+    'products.loading': 'Loading products...',
+    'products.error': 'Error loading products. Please try again.',
+    'products.image': 'Image',
+    'products.name': 'Name',
+    'products.category': 'Category',
+    'products.price': 'Price',
+    'products.stock': 'Stock',
+    'products.status': 'Status',
+    'products.actions': 'Actions',
+    'products.viewCard': 'View Card',
+    'products.beerOfMonth': 'Beer of the Month',
+    'products.markAsMonth': 'Mark as Monthly',
+    'products.listView': 'List View',
+    'products.gridView': 'Grid View',
+    'products.units': 'units',
+
+    // Product Status
+    'productStatus.published': 'Published',
+    'productStatus.draft': 'Draft',
+    'productStatus.archived': 'Archived',
+
+    // Create Product Modal
+    'createProduct.title': 'New Beer',
+    'createProduct.subtitle': 'Create a new craft beer product',
+    'createProduct.basicInfo': 'Basic Information',
+    'createProduct.beerName': 'Beer Name',
+    'createProduct.sku': 'SKU',
+    'createProduct.classification': 'Classification',
+    'createProduct.category': 'Category',
+    'createProduct.selectCategory': 'Select category...',
+    'createProduct.beerType': 'Beer Type',
+    'createProduct.brandCharacter': 'Brand Character',
+    'createProduct.relatedCharacter': 'Related Character',
+    'createProduct.noCharacter': 'No character (optional)',
+    'createProduct.characterHelp': 'Optional: Associate this beer with a brand character to display in the mobile app',
+    'createProduct.technicalSpecs': 'Technical Specifications',
+    'createProduct.abv': 'ABV (%)',
+    'createProduct.abvHelp': 'Alcohol By Volume',
+    'createProduct.ibu': 'IBU',
+    'createProduct.ibuHelp': 'International Bitterness Units',
+    'createProduct.srm': 'SRM',
+    'createProduct.srmHelp': 'Standard Reference Method (Color)',
+    'createProduct.priceAndStatus': 'Price and Status',
+    'createProduct.basePrice': 'Base Price (\u20ac)',
+    'createProduct.status': 'Status',
+    'createProduct.description': 'Description',
+    'createProduct.beerDescription': 'Beer Description',
+    'createProduct.descriptionPlaceholder': 'Describe the characteristics, flavor, aroma and experience of this beer...',
+    'createProduct.tags': 'Tags',
+    'createProduct.tagsLabel': 'Tags (select multiple)',
+    'createProduct.tagsHelp': 'Hold Ctrl (Cmd on Mac) to select multiple options',
+    'createProduct.required': 'required',
+    'createProduct.createButton': 'Create Beer',
+    'createProduct.creating': 'Creating...',
+    'createProduct.requiredFields': 'Please complete the required fields: Name, SKU and Category',
+    'createProduct.createError': 'Error creating product',
+    'createProduct.removeBeerOfMonth': 'Remove as Beer of the Month?',
+    'createProduct.beerOfMonthSuccess': 'has been marked as Beer of the Month',
+    'createProduct.featuredError': 'Error updating featured configuration. Please try again.',
+
+    // Product Tags
+    'tag.artesanal': 'Craft',
+    'tag.premium': 'Premium',
+    'tag.sinGluten': 'Gluten Free',
+    'tag.edicionLimitada': 'Limited Edition',
+    'tag.nuevoLanzamiento': 'New Release',
+    'tag.bestseller': 'Bestseller',
+    'tag.premio': 'Award',
+    'tag.local': 'Local',
+    'tag.organico': 'Organic',
+    'tag.vegano': 'Vegan',
+
+    // Beer Categories
+    'beerCategory.ipa': 'IPA',
+    'beerCategory.lager': 'Lager',
+    'beerCategory.stout': 'Stout',
+    'beerCategory.ale': 'Ale',
+    'beerCategory.porter': 'Porter',
+    'beerCategory.pilsner': 'Pilsner',
+    'beerCategory.wheat': 'Wheat Beer',
+    'beerCategory.saison': 'Saison',
+    'beerCategory.bock': 'Bock',
+    'beerCategory.specialty': 'Specialty',
+  },
+};
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export function LanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<Language>(() => {
+    const saved = localStorage.getItem('app-language');
+    return (saved === 'en' || saved === 'es') ? saved : 'es';
+  });
+
+  const setLanguage = (lang: Language) => {
+    setLanguageState(lang);
+    localStorage.setItem('app-language', lang);
+  };
+
+  const t = (key: string): string => {
+    return translations[language][key] || key;
+  };
+
+  return (
+    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export function useLanguage() {
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
+}

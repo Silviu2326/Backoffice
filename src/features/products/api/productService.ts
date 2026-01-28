@@ -8,9 +8,12 @@ export interface SupabaseProduct {
   id: string;
   sku: string;
   name: string;
+  name_en?: string;
   slug: string;
   description: string;
+  description_en?: string;
   rich_description?: string;
+  rich_description_en?: string;
   base_price: number;
   images: string[];
   category: string;
@@ -37,9 +40,12 @@ function mapSupabaseToProduct(supabaseProduct: SupabaseProduct): Product {
     id: supabaseProduct.id,
     sku: supabaseProduct.sku,
     name: supabaseProduct.name,
+    nameEn: supabaseProduct.name_en,
     slug: supabaseProduct.slug,
     description: supabaseProduct.description,
+    descriptionEn: supabaseProduct.description_en,
     richDescription: supabaseProduct.rich_description,
+    richDescriptionEn: supabaseProduct.rich_description_en,
     basePrice: supabaseProduct.base_price,
     images: Array.isArray(supabaseProduct.images) ? supabaseProduct.images : [],
     category: supabaseProduct.category,
@@ -63,9 +69,12 @@ function mapProductToSupabase(product: Partial<Product>): Partial<SupabaseProduc
   return {
     sku: product.sku,
     name: product.name,
+    name_en: product.nameEn,
     slug: product.slug,
     description: product.description,
+    description_en: product.descriptionEn,
     rich_description: product.richDescription,
+    rich_description_en: product.richDescriptionEn,
     base_price: product.basePrice,
     images: product.images,
     category: product.category,

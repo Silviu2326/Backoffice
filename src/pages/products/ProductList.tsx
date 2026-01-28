@@ -30,6 +30,7 @@ import {
 } from '../../features/products/api/productService';
 import { getProductTotalStock } from '../../features/products/api/productVariantService';
 import { getCharacters } from '../../features/brand/api/characterService';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Simulated stock status since it's not on the main Product type (it's on Variants)
 type StockStatus = 'IN_STOCK' | 'LOW_STOCK' | 'OUT_OF_STOCK';
@@ -40,6 +41,7 @@ interface ProductWithStock extends Product {
 }
 
 const ProductList = () => {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductWithStock[]>([]);
   const [characters, setCharacters] = useState<Character[]>([]);
@@ -128,7 +130,7 @@ const ProductList = () => {
         setProducts(productsWithStock);
       } catch (err) {
         console.error('Error loading products:', err);
-        setError('Error al cargar los productos. Por favor, intenta de nuevo.');
+        setError(t('products.error'));
       } finally {
         setIsLoading(false);
       }
@@ -146,16 +148,16 @@ const ProductList = () => {
   const categories = useMemo(() => {
     const cats = Array.from(new Set(products.map(p => p.category)));
     return [
-      { value: 'all', label: 'Todas las categorías' },
+      { value: 'all', label: t('products.allCategories') },
       ...cats.map(c => ({ value: c, label: c }))
     ];
-  }, [products]);
+  }, [products, t]);
 
   const stockOptions = [
-    { value: 'all', label: 'Todos los estados' },
-    { value: 'IN_STOCK', label: 'En Stock' },
-    { value: 'LOW_STOCK', label: 'Stock Bajo' },
-    { value: 'OUT_OF_STOCK', label: 'Sin Stock' },
+    { value: 'all', label: t('products.allStatus') },
+    { value: 'IN_STOCK', label: t('products.inStock') },
+    { value: 'LOW_STOCK', label: t('products.lowStock') },
+    { value: 'OUT_OF_STOCK', label: t('products.outOfStock') },
   ];
 
   // El filtrado de búsqueda y categoría se hace en Supabase
@@ -241,9 +243,9 @@ const ProductList = () => {
 
   const getStatusLabel = (status: string) => {
       switch (status) {
-          case 'PUBLISHED': return 'Publicado';
-          case 'DRAFT': return 'Borrador';
-          case 'ARCHIVED': return 'Archivado';
+          case 'PUBLISHED': return t('productStatus.published');
+          case 'DRAFT': return t('productStatus.draft');
+          case 'ARCHIVED': return t('productStatus.archived');
           default: return status;
       }
   };
@@ -338,11 +340,11 @@ const ProductList = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Productos</h1>
-          <p className="text-text-secondary mt-1">Gestiona tu catálogo de productos</p>
+          <h1 className="text-2xl font-bold text-white">{t('products.title')}</h1>
+          <p className="text-text-secondary mt-1">{t('products.subtitle')}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)} leftIcon={<Plus className="w-4 h-4" />}>
-          Nuevo Producto
+          {t('products.newProduct')}
         </Button>
       </div>
 
@@ -351,7 +353,7 @@ const ProductList = () => {
         <div className="flex flex-1 flex-col sm:flex-row gap-4 w-full lg:w-auto">
           <div className="w-full sm:w-72">
             <Input
-              placeholder="Buscar productos..."
+              placeholder={t('products.searchProducts')}
               leftIcon={<Search className="w-4 h-4" />}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -379,22 +381,22 @@ const ProductList = () => {
           <button
             onClick={() => setViewMode('list')}
             className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'list' 
-                ? 'bg-brand-orange text-white' 
+              viewMode === 'list'
+                ? 'bg-brand-orange text-white'
                 : 'text-text-secondary hover:text-white hover:bg-white/5'
             }`}
-            title="Vista Lista"
+            title={t('products.listView')}
           >
             <ListIcon className="w-5 h-5" />
           </button>
           <button
             onClick={() => setViewMode('grid')}
             className={`p-2 rounded-lg transition-colors ${
-              viewMode === 'grid' 
-                ? 'bg-brand-orange text-white' 
+              viewMode === 'grid'
+                ? 'bg-brand-orange text-white'
                 : 'text-text-secondary hover:text-white hover:bg-white/5'
             }`}
-            title="Vista Cuadrícula"
+            title={t('products.gridView')}
           >
             <LayoutGrid className="w-5 h-5" />
           </button>
@@ -412,7 +414,7 @@ const ProductList = () => {
       {isLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
-          <span className="ml-3 text-text-secondary">Cargando productos...</span>
+          <span className="ml-3 text-text-secondary">{t('products.loading')}</span>
         </div>
       ) : (
         <>
@@ -422,13 +424,13 @@ const ProductList = () => {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-[80px]">Imagen</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Categoría</TableHead>
-                <TableHead>Precio</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
+                <TableHead className="w-[80px]">{t('products.image')}</TableHead>
+                <TableHead>{t('products.name')}</TableHead>
+                <TableHead>{t('products.category')}</TableHead>
+                <TableHead>{t('products.price')}</TableHead>
+                <TableHead>{t('products.stock')}</TableHead>
+                <TableHead>{t('products.status')}</TableHead>
+                <TableHead className="text-right">{t('products.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -478,7 +480,7 @@ const ProductList = () => {
                         product.stockStatus === 'LOW_STOCK' ? 'bg-yellow-500' : 'bg-red-500'
                       }`} />
                       <span className="text-sm text-text-secondary">
-                        {product.stockLevel} uds
+                        {product.stockLevel} {t('products.units')}
                       </span>
                     </div>
                   </TableCell>
@@ -493,45 +495,45 @@ const ProductList = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleViewProduct(product.id)}
                         className="text-text-secondary hover:text-white"
-                        title="Ver ficha del producto"
+                        title={t('products.viewCard')}
                       >
                         <Eye className="w-4 h-4 mr-1" />
-                        Ver Ficha
+                        {t('products.viewCard')}
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleSetBeerOfMonth(product)}
                         className={`${
-                          product.featuredConfig?.isFeatured && 
+                          product.featuredConfig?.isFeatured &&
                           product.featuredConfig?.featuredType === 'beer_of_month'
                             ? 'text-[#ff6b35] hover:text-[#ff6b35]/80'
                             : 'text-text-secondary hover:text-[#ff6b35]'
                         }`}
                         title={
-                          product.featuredConfig?.isFeatured && 
+                          product.featuredConfig?.isFeatured &&
                           product.featuredConfig?.featuredType === 'beer_of_month'
-                            ? 'Quitar como Cerveza del Mes'
-                            : 'Marcar como Cerveza del Mes'
+                            ? t('createProduct.removeBeerOfMonth')
+                            : t('products.beerOfMonth')
                         }
                       >
-                        <Star 
+                        <Star
                           className={`w-4 h-4 mr-1 ${
-                            product.featuredConfig?.isFeatured && 
+                            product.featuredConfig?.isFeatured &&
                             product.featuredConfig?.featuredType === 'beer_of_month'
                               ? 'fill-[#ff6b35]'
                               : ''
-                          }`} 
+                          }`}
                         />
-                        {product.featuredConfig?.isFeatured && 
+                        {product.featuredConfig?.isFeatured &&
                          product.featuredConfig?.featuredType === 'beer_of_month'
-                          ? 'Cerveza del Mes'
-                          : 'Marcar del Mes'}
+                          ? t('products.beerOfMonth')
+                          : t('products.markAsMonth')}
                       </Button>
                     </div>
                   </TableCell>
@@ -552,7 +554,7 @@ const ProductList = () => {
                 />
                 <div className="absolute top-3 right-3">
                   <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold backdrop-blur-md ${getStockBadgeColor(product.stockStatus)}`}>
-                    {product.stockStatus === 'IN_STOCK' ? 'EN STOCK' : product.stockStatus === 'LOW_STOCK' ? 'STOCK BAJO' : 'SIN STOCK'}
+                    {product.stockStatus === 'IN_STOCK' ? t('products.inStock').toUpperCase() : product.stockStatus === 'LOW_STOCK' ? t('products.lowStock').toUpperCase() : t('products.outOfStock').toUpperCase()}
                   </span>
                 </div>
               </div>

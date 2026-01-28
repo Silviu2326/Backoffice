@@ -1,10 +1,11 @@
 import React from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
-import { Search, Bell, ChevronRight, ChevronDown, Sun, Moon, Settings, LogOut, User, Menu } from 'lucide-react';
+import { Search, Bell, ChevronRight, ChevronDown, Sun, Moon, Settings, LogOut, User, Menu, Globe } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import Avatar from '../ui/Avatar';
 
 interface HeaderProps {
@@ -16,9 +17,11 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const pathnames = location.pathname.split('/').filter((x) => x);
   const [notifications] = React.useState(3);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const [isLanguageOpen, setIsLanguageOpen] = React.useState(false);
   const [isDark, setIsDark] = React.useState(true); // Mock theme state
 
   const handleSignOut = async () => {
@@ -37,25 +40,28 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
       if (isProfileOpen && !target.closest('.profile-dropdown')) {
         setIsProfileOpen(false);
       }
+      if (isLanguageOpen && !target.closest('.language-dropdown')) {
+        setIsLanguageOpen(false);
+      }
     };
 
-    if (isProfileOpen) {
+    if (isProfileOpen || isLanguageOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isProfileOpen]);
+  }, [isProfileOpen, isLanguageOpen]);
 
   const breadcrumbMap: Record<string, string> = {
-    'crm': 'CRM Clientes',
-    'orders': 'Pedidos',
-    'products': 'Productos',
-    'stores': 'Tiendas',
-    'characters': 'Personajes',
-    'events': 'Eventos',
-    'gamification': 'Gamificación',
-    'marketing': 'Marketing',
-    'moderation': 'Moderación',
-    'settings': 'Configuración',
+    'crm': t('breadcrumb.crm'),
+    'orders': t('breadcrumb.orders'),
+    'products': t('breadcrumb.products'),
+    'stores': t('breadcrumb.stores'),
+    'characters': t('breadcrumb.characters'),
+    'events': t('breadcrumb.events'),
+    'gamification': t('breadcrumb.gamification'),
+    'marketing': t('breadcrumb.marketing'),
+    'moderation': t('breadcrumb.moderation'),
+    'settings': t('breadcrumb.settings'),
   };
 
   return (
@@ -70,11 +76,11 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
 
         {/* Left: Breadcrumbs */}
         <nav className="flex items-center text-sm text-text-secondary">
-        <Link 
-          to="/" 
+        <Link
+          to="/"
           className="hover:text-white transition-colors"
         >
-          Inicio
+          {t('header.home')}
         </Link>
         
         {pathnames.map((value, index) => {
@@ -108,13 +114,41 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* Theme Toggle (Optional) */}
-     
+        {/* Language Toggle */}
+        <div className="relative language-dropdown">
+          <button
+            onClick={() => setIsLanguageOpen(!isLanguageOpen)}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-text-secondary hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+            title={language === 'es' ? 'Cambiar idioma' : 'Change language'}
+          >
+            <Globe className="h-4 w-4" />
+            <span className="hidden sm:inline uppercase font-medium">{language}</span>
+          </button>
 
-        {/* Notifications */}
-        <div className="relative">
-        
-        
+          {isLanguageOpen && (
+            <div className="absolute right-0 mt-2 w-40 rounded-xl bg-brand-surface border border-white/10 shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+              <button
+                onClick={() => { setLanguage('es'); setIsLanguageOpen(false); }}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors",
+                  language === 'es' ? "text-brand bg-brand/10" : "text-text-secondary hover:bg-white/5 hover:text-white"
+                )}
+              >
+                <span className="text-base">🇪🇸</span>
+                {t('language.spanish')}
+              </button>
+              <button
+                onClick={() => { setLanguage('en'); setIsLanguageOpen(false); }}
+                className={cn(
+                  "w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors",
+                  language === 'en' ? "text-brand bg-brand/10" : "text-text-secondary hover:bg-white/5 hover:text-white"
+                )}
+              >
+                <span className="text-base">🇬🇧</span>
+                {t('language.english')}
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Divider */}
@@ -149,21 +183,21 @@ export default function Header({ onMenuClick, className }: HeaderProps) {
               
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
                 <User className="h-4 w-4" />
-                Perfil
+                {t('header.profile')}
               </button>
               <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
                 <Settings className="h-4 w-4" />
-                Configuración
+                {t('header.settings')}
               </button>
-              
+
               <div className="my-1 border-t border-white/10" />
-              
-              <button 
+
+              <button
                 onClick={handleSignOut}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                Cerrar Sesión
+                {t('header.logout')}
               </button>
             </div>
           )}

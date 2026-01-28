@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { getCustomers, updateCustomer, createCustomer, deleteCustomer } from '../../features/crm/api/customerService';
 import { Customer as CustomerType, CustomerSegment } from '../../types/core';
 import { getAllOrders } from '../../features/orders/api/orderService';
+import { useLanguage } from '../../context/LanguageContext';
 
 interface Customer {
   id: string;
@@ -94,6 +95,7 @@ const AVAILABLE_AVATARS = [
 ];
 
 export const CustomerList: React.FC = () => {
+  const { t } = useLanguage();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -110,7 +112,7 @@ export const CustomerList: React.FC = () => {
   });
 
   const handleDeleteCustomer = async (id: string) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar este cliente? Esta acción no se puede deshacer.')) {
+    if (!window.confirm(t('customers.confirmDelete'))) {
       return;
     }
 
@@ -119,18 +121,18 @@ export const CustomerList: React.FC = () => {
       setCustomers(prev => prev.filter(c => c.id !== id));
     } catch (err: any) {
       console.error('Error deleting customer:', err);
-      alert('Error al eliminar el cliente: ' + (err.message || 'Error desconocido'));
+      alert(t('customers.deleteError') + ': ' + (err.message || 'Error'));
     }
   };
 
   const customerColumns: Column<Customer>[] = useMemo(() => [
     {
-      header: 'Cliente',
+      header: t('customers.customer'),
       accessorKey: 'name',
       render: (row: Customer) => {
         const avatarName = row.avatar
           ? AVAILABLE_AVATARS.find(a => a.path === row.avatar)?.name || row.avatar
-          : 'Sin avatar';
+          : t('customers.noAvatar');
         return (
           <div className="flex flex-col">
             <Link to={`/admin/crm/customers/${row.id}`} className="text-blue-600 hover:underline">
@@ -145,7 +147,7 @@ export const CustomerList: React.FC = () => {
       },
     },
     {
-      header: 'Email',
+      header: t('common.email'),
       accessorKey: 'email',
       render: (row: Customer) => (
         <div className="flex flex-col">
@@ -159,11 +161,11 @@ export const CustomerList: React.FC = () => {
       ),
     },
     {
-      header: 'Teléfono',
+      header: t('customers.phone'),
       accessorKey: 'phone',
     },
     {
-      header: 'Puntos',
+      header: t('customers.points'),
       render: (row: Customer) => (
         <span className="text-brand-orange font-semibold">
           {row.pointsBalance || 0} pts
@@ -171,12 +173,12 @@ export const CustomerList: React.FC = () => {
       ),
     },
     {
-      header: 'Creado en',
+      header: t('customers.createdAt'),
       accessorKey: 'createdAt',
       render: (row: Customer) => new Date(row.createdAt).toLocaleDateString(),
     },
     {
-      header: 'Estado',
+      header: t('customers.status'),
       accessorKey: 'status',
       render: (row: Customer) => {
         const variants: Record<string, "success" | "danger" | "warning"> = {
@@ -184,16 +186,21 @@ export const CustomerList: React.FC = () => {
           inactive: 'danger',
           lead: 'warning',
         };
-        return <Badge variant={variants[row.status] || 'default'}>{row.status}</Badge>;
+        const statusLabels: Record<string, string> = {
+          active: t('status.active'),
+          inactive: t('status.inactive'),
+          lead: t('status.lead'),
+        };
+        return <Badge variant={variants[row.status] || 'default'}>{statusLabels[row.status] || row.status}</Badge>;
       },
     },
     {
-      header: 'Acciones',
+      header: t('customers.actions'),
       render: (row: Customer) => (
         <div className="flex items-center gap-2">
           <Link to={`/admin/crm/customers/${row.id}`}>
             <Button variant="outline" size="sm" leftIcon={<Eye className="h-4 w-4" />}>
-              Ver
+              {t('common.view')}
             </Button>
           </Link>
           <Button
@@ -207,7 +214,7 @@ export const CustomerList: React.FC = () => {
         </div>
       ),
     },
-  ], []);
+  ], [t]);
 
   // Cargar clientes desde Supabase
   useEffect(() => {
@@ -261,14 +268,14 @@ export const CustomerList: React.FC = () => {
         setCustomers(mappedCustomers);
       } catch (err) {
         console.error('Error loading customers:', err);
-        setError('Error al cargar los clientes. Por favor, inténtalo de nuevo.');
+        setError(t('customers.error'));
       } finally {
         setIsLoading(false);
       }
     };
 
     loadCustomers();
-  }, [searchTerm, statusFilter, segmentFilter]);
+  }, [searchTerm, statusFilter, segmentFilter, t]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewCustomer({ ...newCustomer, [e.target.name]: e.target.value });
@@ -281,7 +288,7 @@ export const CustomerList: React.FC = () => {
   const handleCreateCustomer = async () => {
     try {
       if (!newCustomer.name || !newCustomer.email) {
-        alert('El nombre y el email son obligatorios');
+        alert(t('customers.requiredFields'));
         return;
       }
 
@@ -311,18 +318,13 @@ export const CustomerList: React.FC = () => {
 
       // Actualizar la lista localmente
       setCustomers([mappedCreated, ...customers]);
-      
+
       setIsModalOpen(false);
       setNewCustomer({ name: '', email: '', phone: '', status: 'active', avatar: '' });
-      alert('Cliente creado correctamente');
+      alert(t('customers.createSuccess'));
     } catch (err: any) {
       console.error('Error creating customer:', err);
-      // Si el error es de clave foránea, explicamos mejor
-      if (err.message && err.message.includes('foreign key constraint')) {
-        alert('Error: No se pudo crear el perfil porque la base de datos requiere un usuario de Auth existente. En este entorno demo, esto puede ser una limitación.');
-      } else {
-        alert('Error al crear el cliente: ' + (err.message || 'Error desconocido'));
-      }
+      alert(t('customers.deleteError') + ': ' + (err.message || 'Error'));
     } finally {
       setIsLoading(false);
     }
@@ -331,13 +333,13 @@ export const CustomerList: React.FC = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold text-white">Clientes</h1>
+        <h1 className="text-2xl font-semibold text-white">{t('customers.title')}</h1>
         <Button onClick={() => setIsModalOpen(true)} leftIcon={<Plus className="h-4 w-4" />}>
-          Nuevo Cliente
+          {t('customers.newCustomer')}
         </Button>
       </div>
-      
-      <CustomerFilters 
+
+      <CustomerFilters
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         statusFilter={statusFilter}
@@ -345,12 +347,12 @@ export const CustomerList: React.FC = () => {
         segmentFilter={segmentFilter}
         onSegmentChange={setSegmentFilter}
       />
-      
+
       <div className="mt-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
-            <span className="ml-3 text-text-secondary">Cargando clientes...</span>
+            <span className="ml-3 text-text-secondary">{t('customers.loading')}</span>
           </div>
         ) : error ? (
           <div className="bg-status-error/10 border border-status-error/20 rounded-lg p-4 text-status-error">
@@ -371,18 +373,18 @@ export const CustomerList: React.FC = () => {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <ModalHeader>Crear Nuevo Cliente</ModalHeader>
+        <ModalHeader>{t('customers.createTitle')}</ModalHeader>
         <ModalBody>
           <div className="space-y-4">
             <Input
-              label="Nombre Completo"
+              label={t('customers.fullName')}
               name="name"
               value={newCustomer.name}
               onChange={handleInputChange}
               placeholder="Ej. Juan Perez"
             />
             <Input
-              label="Email"
+              label={t('common.email')}
               name="email"
               type="email"
               value={newCustomer.email}
@@ -390,18 +392,18 @@ export const CustomerList: React.FC = () => {
               placeholder="juan@example.com"
             />
             <Input
-              label="Teléfono"
+              label={t('customers.phone')}
               name="phone"
               value={newCustomer.phone}
               onChange={handleInputChange}
               placeholder="+34 600 000 000"
             />
             <Select
-              label="Estado"
+              label={t('customers.status')}
               options={[
-                { value: 'active', label: 'Activo' },
-                { value: 'inactive', label: 'Inactivo' },
-                { value: 'lead', label: 'Lead' },
+                { value: 'active', label: t('status.active') },
+                { value: 'inactive', label: t('status.inactive') },
+                { value: 'lead', label: t('status.lead') },
               ]}
               value={newCustomer.status}
               onChange={handleSelectChange}
@@ -410,7 +412,7 @@ export const CustomerList: React.FC = () => {
             {/* Avatar Selection */}
             <div>
               <label className="block text-sm font-medium text-text-secondary mb-2">
-                Avatar
+                {t('customers.avatar')}
               </label>
               <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto p-2 bg-[#2C2C2C] rounded-lg border border-white/10">
                 <button
@@ -426,7 +428,7 @@ export const CustomerList: React.FC = () => {
                   <div className="w-full aspect-square bg-white/10 rounded-lg flex items-center justify-center">
                     <ImageIcon className="w-6 h-6 text-text-secondary" />
                   </div>
-                  <p className="text-xs text-text-secondary mt-1 text-center">Ninguno</p>
+                  <p className="text-xs text-text-secondary mt-1 text-center">{t('common.none')}</p>
                 </button>
                 {AVAILABLE_AVATARS.map((avatar) => (
                   <button
@@ -458,7 +460,7 @@ export const CustomerList: React.FC = () => {
               </div>
               {newCustomer.avatar && (
                 <p className="text-xs text-text-secondary mt-2">
-                  Avatar seleccionado: {AVAILABLE_AVATARS.find(a => a.path === newCustomer.avatar)?.name || 'Personalizado'}
+                  {t('customers.selectedAvatar')}: {AVAILABLE_AVATARS.find(a => a.path === newCustomer.avatar)?.name || 'Custom'}
                 </p>
               )}
             </div>
@@ -466,10 +468,10 @@ export const CustomerList: React.FC = () => {
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" onClick={() => setIsModalOpen(false)}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleCreateCustomer}>
-            Crear Cliente
+            {t('customers.createButton')}
           </Button>
         </ModalFooter>
       </Modal>

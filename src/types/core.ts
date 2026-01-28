@@ -217,14 +217,20 @@ export interface Product {
   id: string;
   /** Stock Keeping Unit */
   sku: string;
-  /** Product Name */
+  /** Product Name (default/Spanish) */
   name: string;
+  /** Product Name in English */
+  nameEn?: string;
   /** URL-friendly identifier */
   slug: string;
-  /** Short plain text description */
+  /** Short plain text description (default/Spanish) */
   description: string;
-  /** HTML formatted detailed description */
+  /** Short plain text description in English */
+  descriptionEn?: string;
+  /** HTML formatted detailed description (default/Spanish) */
   richDescription?: string;
+  /** HTML formatted detailed description in English */
+  richDescriptionEn?: string;
   /** Base price before variants */
   basePrice: number;
   /** Array of image URLs */
@@ -380,10 +386,14 @@ export interface Store {
 export interface Event {
   /** Unique Identifier */
   id: string;
-  /** Event Title */
+  /** Event Title (default/Spanish) */
   title: string;
-  /** Description of the event */
+  /** Event Title in English */
+  titleEn?: string;
+  /** Description of the event (default/Spanish) */
   description?: string;
+  /** Description in English */
+  descriptionEn?: string;
   /** URL of cover image */
   coverImageUrl?: string;
   /** URL of hero image (alternative) */
@@ -557,20 +567,32 @@ export interface AuditLog {
 export interface Character {
   /** Unique Identifier */
   id: string;
-  /** Character Name */
+  /** Character Name (default/Spanish) */
   name: string;
+  /** Character Name in English */
+  nameEn?: string;
   /** URL-friendly identifier */
   slug: string;
-  /** Role of the character */
+  /** Role of the character (default/Spanish) */
   role: string;
+  /** Role in English */
+  roleEn?: string;
   /** Role subtitle */
   roleSubtitle?: string;
-  /** Full biography */
+  /** Role subtitle in English */
+  roleSubtitleEn?: string;
+  /** Full biography (default/Spanish) */
   biography?: string;
-  /** Short description */
+  /** Full biography in English */
+  biographyEn?: string;
+  /** Short description (default/Spanish) */
   description?: string;
-  /** Signature quote */
+  /** Short description in English */
+  descriptionEn?: string;
+  /** Signature quote (default/Spanish) */
   signatureQuote?: string;
+  /** Signature quote in English */
+  signatureQuoteEn?: string;
   /** Alternative quote */
   quote?: string;
   /** Avatar image URL */

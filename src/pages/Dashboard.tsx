@@ -5,12 +5,16 @@ import KPIWidget from '../components/dashboard/KPIWidget';
 import { InventoryWidget } from '../components/dashboard/InventoryWidget';
 import { TopCustomersWidget } from '../components/dashboard/TopCustomersWidget';
 import { getDashboardStats } from '../features/dashboard/api/dashboardService';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function Dashboard() {
+  const { t, language } = useLanguage();
+  const locale = language === 'es' ? 'es-ES' : 'en-US';
+
   const [stats, setStats] = useState([
-    { name: 'Ingresos Totales', value: '0€', trend: 0, trendLabel: 'vs mes anterior', icon: DollarSign },
-    { name: 'Ticket Medio (AOV)', value: '0€', trend: 0, trendLabel: 'vs mes anterior', icon: ShoppingBag },
-    { name: 'Pedidos Totales', value: '0', trend: 0, trendLabel: 'vs mes anterior', icon: Users },
+    { nameKey: 'dashboard.totalRevenue', value: '0€', trend: 0, trendLabelKey: 'dashboard.vsPreviousMonth', icon: DollarSign },
+    { nameKey: 'dashboard.averageOrder', value: '0€', trend: 0, trendLabelKey: 'dashboard.vsPreviousMonth', icon: ShoppingBag },
+    { nameKey: 'dashboard.totalOrders', value: '0', trend: 0, trendLabelKey: 'dashboard.vsPreviousMonth', icon: Users },
   ]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -22,24 +26,24 @@ export default function Dashboard() {
 
         setStats([
           {
-            name: 'Ingresos Totales',
-            value: new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(dashboardStats.totalRevenue),
+            nameKey: 'dashboard.totalRevenue',
+            value: new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(dashboardStats.totalRevenue),
             trend: dashboardStats.revenueTrend,
-            trendLabel: 'vs mes anterior',
+            trendLabelKey: 'dashboard.vsPreviousMonth',
             icon: DollarSign,
           },
           {
-            name: 'Ticket Medio (AOV)',
-            value: new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(dashboardStats.averageOrderValue),
+            nameKey: 'dashboard.averageOrder',
+            value: new Intl.NumberFormat(locale, { style: 'currency', currency: 'EUR' }).format(dashboardStats.averageOrderValue),
             trend: dashboardStats.aovTrend,
-            trendLabel: 'vs mes anterior',
+            trendLabelKey: 'dashboard.vsPreviousMonth',
             icon: ShoppingBag,
           },
           {
-            name: 'Pedidos Totales',
-            value: dashboardStats.totalOrders.toLocaleString('es-ES'),
+            nameKey: 'dashboard.totalOrders',
+            value: dashboardStats.totalOrders.toLocaleString(locale),
             trend: dashboardStats.ordersTrend,
-            trendLabel: 'vs mes anterior',
+            trendLabelKey: 'dashboard.vsPreviousMonth',
             icon: Users,
           },
         ]);
@@ -51,13 +55,13 @@ export default function Dashboard() {
     };
 
     loadStats();
-  }, []);
+  }, [locale]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-brand-orange" />
-        <span className="ml-3 text-text-secondary">Cargando estadísticas...</span>
+        <span className="ml-3 text-text-secondary">{t('dashboard.loadingStats')}</span>
       </div>
     );
   }
@@ -67,20 +71,20 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white font-display tracking-tight">Dashboard Ejecutivo</h1>
-          <p className="text-text-secondary mt-1">Resumen operativo y financiero en tiempo real.</p>
+          <h1 className="text-3xl font-bold text-white font-display tracking-tight">{t('dashboard.title')}</h1>
+          <p className="text-text-secondary mt-1">{t('dashboard.subtitle')}</p>
         </div>
-        
+
         <div className="flex items-center gap-3">
            {/* Mock Date Range Picker */}
            <button className="flex items-center gap-2 bg-[#2C2C2C] px-4 py-2 rounded-lg border border-white/5 text-sm text-gray-300 hover:bg-white/5 transition-colors">
               <Calendar className="h-4 w-4" />
-              <span>Este Mes: 1 Nov - 19 Nov</span>
+              <span>{t('dashboard.thisMonth')}: 1 Nov - 19 Nov</span>
            </button>
 
            <div className="flex items-center gap-2 bg-[#2C2C2C] px-4 py-2 rounded-lg border border-white/5">
               <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm text-gray-300 font-medium">En Línea</span>
+              <span className="text-sm text-gray-300 font-medium">{t('common.online')}</span>
            </div>
         </div>
       </div>
@@ -89,11 +93,11 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((item) => (
           <KPIWidget
-            key={item.name}
-            title={item.name}
+            key={item.nameKey}
+            title={t(item.nameKey)}
             value={item.value}
             trend={item.trend}
-            trendLabel={item.trendLabel}
+            trendLabel={t(item.trendLabelKey)}
             icon={item.icon}
           />
         ))}

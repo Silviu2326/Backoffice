@@ -7,7 +7,9 @@ import { Event } from '../../../types/core';
 export interface SupabaseEvent {
   id: string;
   title: string;
+  title_en?: string;
   description?: string;
+  description_en?: string;
   cover_image_url?: string;
   hero_image?: string;
   category?: string;
@@ -48,7 +50,9 @@ function mapSupabaseToEvent(supabaseEvent: SupabaseEvent): Event {
   return {
     id: supabaseEvent.id,
     title: supabaseEvent.title,
+    titleEn: supabaseEvent.title_en,
     description: supabaseEvent.description,
+    descriptionEn: supabaseEvent.description_en,
     coverImageUrl: supabaseEvent.cover_image_url,
     heroImage: supabaseEvent.hero_image,
     category: supabaseEvent.category,
@@ -90,7 +94,9 @@ function mapEventToSupabase(event: Partial<Event>): Partial<SupabaseEvent> {
   const supabaseEvent: Partial<SupabaseEvent> = {};
 
   if (event.title !== undefined) supabaseEvent.title = event.title;
+  if (event.titleEn !== undefined) supabaseEvent.title_en = event.titleEn;
   if (event.description !== undefined) supabaseEvent.description = event.description;
+  if (event.descriptionEn !== undefined) supabaseEvent.description_en = event.descriptionEn;
   if (event.coverImageUrl !== undefined) supabaseEvent.cover_image_url = event.coverImageUrl;
   if (event.heroImage !== undefined) supabaseEvent.hero_image = event.heroImage;
   if (event.category !== undefined) supabaseEvent.category = event.category;
@@ -555,7 +561,9 @@ export async function regenerateRecurringSeries(
 
   const baseEventData: Omit<Event, 'id' | 'createdAt'> = {
     title: firstEvent.title,
+    titleEn: firstEvent.titleEn,
     description: firstEvent.description,
+    descriptionEn: firstEvent.descriptionEn,
     coverImageUrl: firstEvent.coverImageUrl,
     heroImage: firstEvent.heroImage,
     category: firstEvent.category,

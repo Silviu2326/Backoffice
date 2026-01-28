@@ -17,8 +17,10 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import OrderItemsTable from '../../components/orders/OrderItemsTable';
+import { useLanguage } from '../../context/LanguageContext';
 
 const OrderList = () => {
+  const { t } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
@@ -66,7 +68,7 @@ const OrderList = () => {
 
   const handleCreateOrder = async () => {
     if (!selectedCustomerId) {
-      alert('Por favor selecciona un cliente');
+      alert(t('orders.selectCustomerError'));
       return;
     }
 
@@ -87,10 +89,10 @@ const OrderList = () => {
       setIsCreateModalOpen(false);
       setSelectedCustomerId('');
       setEstimatedTotal('');
-      alert('Pedido creado correctamente');
+      alert(t('orders.createSuccess'));
     } catch (error: any) {
       console.error('Error creating order:', error);
-      alert('Error al crear el pedido: ' + (error.message || JSON.stringify(error)));
+      alert(t('orders.createError') + ': ' + (error.message || JSON.stringify(error)));
     } finally {
       setIsLoading(false);
     }
@@ -100,25 +102,25 @@ const OrderList = () => {
     switch (status) {
       case OrderStatus.PENDING_PAYMENT:
       case OrderStatus.PENDING:
-        return <Badge variant="warning" dot>Pendiente Pago</Badge>;
+        return <Badge variant="warning" dot>{t('orderStatus.pendingPayment')}</Badge>;
       case OrderStatus.PAID:
-        return <Badge variant="success" dot>Pagado</Badge>;
+        return <Badge variant="success" dot>{t('orderStatus.paid')}</Badge>;
       case OrderStatus.PREPARING:
       case OrderStatus.PROCESSING:
-        return <Badge variant="brand" dot>Preparando</Badge>;
+        return <Badge variant="brand" dot>{t('orderStatus.preparing')}</Badge>;
       case OrderStatus.READY_TO_SHIP:
-        return <Badge variant="brand" dot>Listo para Enviar</Badge>;
+        return <Badge variant="brand" dot>{t('orderStatus.readyToShip')}</Badge>;
       case OrderStatus.SHIPPED:
-        return <Badge variant="brand" dot>Enviado</Badge>;
+        return <Badge variant="brand" dot>{t('orderStatus.shipped')}</Badge>;
       case OrderStatus.DELIVERED:
       case OrderStatus.COMPLETED:
-        return <Badge variant="success" dot>Entregado</Badge>;
+        return <Badge variant="success" dot>{t('orderStatus.delivered')}</Badge>;
       case OrderStatus.RETURNED:
-        return <Badge variant="danger" dot>Devuelto</Badge>;
+        return <Badge variant="danger" dot>{t('orderStatus.returned')}</Badge>;
       case OrderStatus.CANCELLED:
       case OrderStatus.CANCELLED_LOWERCASE:
       case OrderStatus.FAILED:
-        return <Badge variant="danger" dot>Cancelado</Badge>;
+        return <Badge variant="danger" dot>{t('orderStatus.cancelled')}</Badge>;
       default:
         return <Badge variant="default">{status}</Badge>;
     }
@@ -192,20 +194,20 @@ const OrderList = () => {
 
   const getPaymentStatusBadge = (stripePaymentStatus?: string) => {
     if (!stripePaymentStatus) {
-      return <Badge variant="warning">Sin Pago</Badge>;
+      return <Badge variant="warning">{t('paymentStatus.noPayment')}</Badge>;
     }
 
     switch (stripePaymentStatus) {
       case 'succeeded':
-        return <Badge variant="success" dot>Pagado</Badge>;
+        return <Badge variant="success" dot>{t('paymentStatus.succeeded')}</Badge>;
       case 'processing':
-        return <Badge variant="brand" dot>Procesando</Badge>;
+        return <Badge variant="brand" dot>{t('paymentStatus.processing')}</Badge>;
       case 'requires_payment_method':
       case 'requires_confirmation':
       case 'requires_action':
-        return <Badge variant="warning" dot>Requiere Acción</Badge>;
+        return <Badge variant="warning" dot>{t('paymentStatus.requiresAction')}</Badge>;
       case 'canceled':
-        return <Badge variant="danger" dot>Cancelado</Badge>;
+        return <Badge variant="danger" dot>{t('paymentStatus.canceled')}</Badge>;
       default:
         return <Badge variant="default">{stripePaymentStatus}</Badge>;
     }
@@ -213,12 +215,12 @@ const OrderList = () => {
 
   const columns: Column<Order>[] = [
     {
-      header: 'ID Pedido',
+      header: t('orders.orderId'),
       accessorKey: 'orderNumber',
       className: 'font-medium text-white',
     },
     {
-      header: 'Cliente',
+      header: t('orders.customer'),
       render: (order) => (
         <div className="flex flex-col">
           <span className="text-text-secondary">
@@ -231,7 +233,7 @@ const OrderList = () => {
       ),
     },
     {
-      header: 'Fecha',
+      header: t('orders.date'),
       render: (order) => (
         <span className="text-text-secondary">
           {formatDate(order.createdAt, 'short')}
@@ -239,7 +241,7 @@ const OrderList = () => {
       ),
     },
     {
-      header: 'Total',
+      header: t('orders.total'),
       render: (order) => (
         <span className="font-medium text-white">
           {formatCurrency(order.totalAmount)}
@@ -247,24 +249,24 @@ const OrderList = () => {
       ),
     },
     {
-      header: 'Estado',
+      header: t('orders.status'),
       render: (order) => getStatusBadge(order.status),
     },
     {
-      header: 'Pago Stripe',
+      header: t('orders.stripePayment'),
       render: (order) => getPaymentStatusBadge(order.stripePaymentStatus),
     },
     {
-      header: 'Método Envío',
+      header: t('orders.shippingMethod'),
       render: (order) => (
         <span className="text-text-secondary">
-          {order.shippingMethod === 'home' ? 'A Domicilio' :
-           order.shippingMethod === 'pickup' ? 'Recogida' : 'Estándar'}
+          {order.shippingMethod === 'home' ? t('shipping.home') :
+           order.shippingMethod === 'pickup' ? t('shipping.pickup') : t('shipping.standard')}
         </span>
       ),
     },
     {
-      header: 'Acción',
+      header: t('orders.action'),
       render: (order) => (
         <Button
           variant="ghost"
@@ -276,7 +278,7 @@ const OrderList = () => {
           }}
         >
           <Eye className="h-4 w-4" />
-          <span className="sr-only">Ver Detalle</span>
+          <span className="sr-only">{t('orders.viewDetail')}</span>
         </Button>
       ),
       className: 'text-right',
@@ -287,24 +289,24 @@ const OrderList = () => {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Pedidos</h1>
+          <h1 className="text-2xl font-bold text-white">{t('orders.title')}</h1>
           <p className="text-text-secondary">
-            Gestiona y realiza el seguimiento de todos los pedidos
+            {t('orders.subtitle')}
           </p>
         </div>
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
-          Crear Pedido
+          {t('orders.createOrder')}
         </Button>
       </div>
 
       <Tabs defaultValue="todos" onValueChange={(val) => { setActiveTab(val); setPage(1); }}>
         <TabsList>
-          <TabsTrigger value="todos">Todos</TabsTrigger>
-          <TabsTrigger value="pendientes">Pendientes</TabsTrigger>
-          <TabsTrigger value="proceso">En Proceso</TabsTrigger>
-          <TabsTrigger value="completados">Completados</TabsTrigger>
-          <TabsTrigger value="incidencias">Incidencias</TabsTrigger>
+          <TabsTrigger value="todos">{t('orders.all')}</TabsTrigger>
+          <TabsTrigger value="pendientes">{t('orders.pending')}</TabsTrigger>
+          <TabsTrigger value="proceso">{t('orders.inProgress')}</TabsTrigger>
+          <TabsTrigger value="completados">{t('orders.completed')}</TabsTrigger>
+          <TabsTrigger value="incidencias">{t('orders.incidents')}</TabsTrigger>
         </TabsList>
 
         <div className="mt-6">
@@ -328,30 +330,30 @@ const OrderList = () => {
       </Tabs>
 
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
-        <ModalHeader>Crear Nuevo Pedido</ModalHeader>
+        <ModalHeader>{t('orders.createTitle')}</ModalHeader>
         <ModalBody className="space-y-4">
           <Select
-            label="Cliente"
+            label={t('orders.customer')}
             options={customers.map(c => ({ value: c.id, label: c.fullName }))}
             value={selectedCustomerId}
             onChange={(val) => setSelectedCustomerId(val)}
-            placeholder="Seleccionar cliente..."
+            placeholder={t('orders.selectCustomer')}
           />
           <div className="grid grid-cols-2 gap-4">
             <Input
-              label="Total estimado"
+              label={t('orders.estimatedTotal')}
               placeholder="0.00"
               type="number"
               value={estimatedTotal}
               onChange={(e) => setEstimatedTotal(e.target.value)}
             />
             <Select
-              label="Estado inicial"
+              label={t('orders.initialStatus')}
               options={[
-                { value: OrderStatus.PENDING_PAYMENT, label: 'Pendientes' },
-                { value: OrderStatus.PREPARING, label: 'En Proceso' },
-                { value: OrderStatus.DELIVERED, label: 'Completados' },
-                { value: OrderStatus.CANCELLED, label: 'Incidencias' },
+                { value: OrderStatus.PENDING_PAYMENT, label: t('orders.pending') },
+                { value: OrderStatus.PREPARING, label: t('orders.inProgress') },
+                { value: OrderStatus.DELIVERED, label: t('orders.completed') },
+                { value: OrderStatus.CANCELLED, label: t('orders.incidents') },
               ]}
               onChange={(val) => setSelectedStatus(val as OrderStatus)}
               value={selectedStatus}
@@ -360,10 +362,10 @@ const OrderList = () => {
         </ModalBody>
         <ModalFooter>
           <Button variant="ghost" onClick={() => setIsCreateModalOpen(false)}>
-            Cancelar
+            {t('common.cancel')}
           </Button>
           <Button onClick={handleCreateOrder}>
-            Crear Pedido
+            {t('orders.createButton')}
           </Button>
         </ModalFooter>
       </Modal>
@@ -382,12 +384,12 @@ const OrderList = () => {
           <ModalBody className="space-y-6 flex-1 overflow-y-auto pr-2">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 rounded-lg bg-white/5 p-4 border border-white/10">
                 <div>
-                  <h4 className="mb-2 text-sm font-medium text-text-secondary">Cliente</h4>
+                  <h4 className="mb-2 text-sm font-medium text-text-secondary">{t('orders.customer')}</h4>
                   <p className="font-medium text-white">{getCustomerName(selectedOrder.customerId)}</p>
                   <p className="text-sm text-text-secondary">ID: {selectedOrder.customerId}</p>
                 </div>
                 <div>
-                  <h4 className="mb-2 text-sm font-medium text-text-secondary">Dirección de Envío</h4>
+                  <h4 className="mb-2 text-sm font-medium text-text-secondary">{t('orders.shippingAddress')}</h4>
                   <p className="text-sm text-white">
                     {selectedOrder.shippingAddress.street}<br />
                     {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zipCode}<br />
@@ -395,7 +397,7 @@ const OrderList = () => {
                   </p>
                 </div>
                 <div>
-                  <h4 className="mb-2 text-sm font-medium text-text-secondary">Dirección de Facturación</h4>
+                  <h4 className="mb-2 text-sm font-medium text-text-secondary">{t('orders.billingAddress')}</h4>
                   <p className="text-sm text-white">
                     {selectedOrder.billingAddress.street}<br />
                     {selectedOrder.billingAddress.city}, {selectedOrder.billingAddress.state} {selectedOrder.billingAddress.zipCode}<br />
@@ -405,8 +407,8 @@ const OrderList = () => {
               </div>
 
               <div>
-                <h4 className="mb-4 font-medium text-white">Artículos del Pedido</h4>
-                <OrderItemsTable 
+                <h4 className="mb-4 font-medium text-white">{t('orders.orderItems')}</h4>
+                <OrderItemsTable
                   items={selectedOrder.items}
                   totals={{
                     subtotal: selectedOrder.items.reduce((acc, item) => acc + item.totalPrice, 0),
@@ -420,7 +422,7 @@ const OrderList = () => {
             </ModalBody>
             <ModalFooter className="border-t border-white/10 pt-4">
               <Button onClick={() => setIsViewModalOpen(false)}>
-                Cerrar
+                {t('common.close')}
               </Button>
             </ModalFooter>
         </Modal>

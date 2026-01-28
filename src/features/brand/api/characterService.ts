@@ -7,12 +7,18 @@ import { Character } from '../../../types/core';
 export interface SupabaseCharacter {
   id: string;
   name: string;
+  name_en?: string;
   slug: string;
   role: string;
+  role_en?: string;
   role_subtitle?: string;
+  role_subtitle_en?: string;
   biography?: string;
+  biography_en?: string;
   description?: string;
+  description_en?: string;
   signature_quote?: string;
+  signature_quote_en?: string;
   quote?: string;
   avatar_url?: string;
   cover_image_url?: string;
@@ -44,12 +50,18 @@ function mapSupabaseToCharacter(supabaseCharacter: SupabaseCharacter): Character
   return {
     id: supabaseCharacter.id,
     name: supabaseCharacter.name,
+    nameEn: supabaseCharacter.name_en,
     slug: supabaseCharacter.slug,
     role: supabaseCharacter.role,
+    roleEn: supabaseCharacter.role_en,
     roleSubtitle: supabaseCharacter.role_subtitle,
+    roleSubtitleEn: supabaseCharacter.role_subtitle_en,
     biography: supabaseCharacter.biography,
+    biographyEn: supabaseCharacter.biography_en,
     description: supabaseCharacter.description,
+    descriptionEn: supabaseCharacter.description_en,
     signatureQuote: supabaseCharacter.signature_quote,
+    signatureQuoteEn: supabaseCharacter.signature_quote_en,
     quote: supabaseCharacter.quote,
     avatarUrl: supabaseCharacter.avatar_url,
     coverImageUrl: supabaseCharacter.cover_image_url,
@@ -81,12 +93,18 @@ function mapSupabaseToCharacter(supabaseCharacter: SupabaseCharacter): Character
 function mapCharacterToSupabase(character: Partial<Character>): Partial<SupabaseCharacter> {
   return {
     name: character.name,
+    name_en: character.nameEn,
     slug: character.slug,
     role: character.role,
+    role_en: character.roleEn,
     role_subtitle: character.roleSubtitle,
+    role_subtitle_en: character.roleSubtitleEn,
     biography: character.biography,
+    biography_en: character.biographyEn,
     description: character.description,
+    description_en: character.descriptionEn,
     signature_quote: character.signatureQuote,
+    signature_quote_en: character.signatureQuoteEn,
     quote: character.quote,
     avatar_url: character.avatarUrl,
     cover_image_url: character.coverImageUrl,

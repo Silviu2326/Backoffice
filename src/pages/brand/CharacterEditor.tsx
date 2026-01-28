@@ -5,12 +5,12 @@ import { Input } from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import FileUpload from '../../components/ui/FileUpload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/Tabs';
-import { Save, ArrowLeft, Loader2, Plus, X } from 'lucide-react';
+import { Save, ArrowLeft, Loader2, Plus, X, Languages } from 'lucide-react';
 import { Character } from '../../types/core';
-import { 
-  getCharacterById, 
-  createCharacter, 
-  updateCharacter 
+import {
+  getCharacterById,
+  createCharacter,
+  updateCharacter
 } from '../../features/brand/api/characterService';
 import { uploadFile } from '../../utils/storage';
 
@@ -28,12 +28,18 @@ const CharacterEditor: React.FC = () => {
 
   const [formData, setFormData] = useState({
     name: '',
+    nameEn: '',
     slug: '',
     role: '',
+    roleEn: '',
     roleSubtitle: '',
+    roleSubtitleEn: '',
     biography: '',
+    biographyEn: '',
     description: '',
+    descriptionEn: '',
     signatureQuote: '',
+    signatureQuoteEn: '',
     quote: '',
     avatarUrl: '',
     coverImageUrl: '',
@@ -81,12 +87,18 @@ const CharacterEditor: React.FC = () => {
         setCharacter(fetchedCharacter);
         setFormData({
           name: fetchedCharacter.name,
+          nameEn: fetchedCharacter.nameEn || '',
           slug: fetchedCharacter.slug,
           role: fetchedCharacter.role,
+          roleEn: fetchedCharacter.roleEn || '',
           roleSubtitle: fetchedCharacter.roleSubtitle || '',
+          roleSubtitleEn: fetchedCharacter.roleSubtitleEn || '',
           biography: fetchedCharacter.biography || '',
+          biographyEn: fetchedCharacter.biographyEn || '',
           description: fetchedCharacter.description || '',
+          descriptionEn: fetchedCharacter.descriptionEn || '',
           signatureQuote: fetchedCharacter.signatureQuote || '',
+          signatureQuoteEn: fetchedCharacter.signatureQuoteEn || '',
           quote: fetchedCharacter.quote || '',
           avatarUrl: fetchedCharacter.avatarUrl || '',
           coverImageUrl: fetchedCharacter.coverImageUrl || '',
@@ -147,12 +159,18 @@ const CharacterEditor: React.FC = () => {
 
       const characterData: Partial<Character> & { videoUrl?: string } = {
         name: formData.name,
+        nameEn: formData.nameEn || undefined,
         slug: formData.slug || formData.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
         role: formData.role || 'Sin Rol',
+        roleEn: formData.roleEn || undefined,
         roleSubtitle: formData.roleSubtitle || undefined,
+        roleSubtitleEn: formData.roleSubtitleEn || undefined,
         biography: formData.biography || undefined,
+        biographyEn: formData.biographyEn || undefined,
         description: formData.description || undefined,
+        descriptionEn: formData.descriptionEn || undefined,
         signatureQuote: formData.signatureQuote || undefined,
+        signatureQuoteEn: formData.signatureQuoteEn || undefined,
         quote: formData.quote || undefined,
         avatarUrl: formData.avatarUrl || undefined,
         coverImageUrl: formData.coverImageUrl || undefined,
@@ -286,26 +304,6 @@ const CharacterEditor: React.FC = () => {
               <CardTitle className="text-white">Información Básica</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Input
-                  label="Nombre del Personaje *"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ej. Cool Cat"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Descripción Corta
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descripción corta del personaje..."
-                  rows={3}
-                  className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
-                />
-              </div>
               <div className="flex items-center gap-2 pt-2">
                 <input
                   type="checkbox"
@@ -318,6 +316,104 @@ const CharacterEditor: React.FC = () => {
                   Personaje activo y visible
                 </label>
               </div>
+
+              {/* Translations Section */}
+              <div className="mt-6 pt-6 border-t border-white/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <Languages className="w-5 h-5 text-brand-orange" />
+                  <h3 className="text-lg font-medium text-white">Traducciones / Translations</h3>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Spanish Column */}
+                  <div className="space-y-4 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">🇪🇸</span>
+                      <span className="text-sm font-semibold text-white">Español</span>
+                    </div>
+                    <div>
+                      <Input
+                        label="Nombre del Personaje *"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="Ej. Cool Cat"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        label="Rol"
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        placeholder="Ej. El Aventurero"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        label="Subtítulo del Rol"
+                        value={formData.roleSubtitle}
+                        onChange={(e) => setFormData({ ...formData, roleSubtitle: e.target.value })}
+                        placeholder="Ej. Maestro Cervecero"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        Descripción Corta
+                      </label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder="Descripción corta del personaje..."
+                        rows={3}
+                        className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* English Column */}
+                  <div className="space-y-4 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">🇬🇧</span>
+                      <span className="text-sm font-semibold text-white">English</span>
+                    </div>
+                    <div>
+                      <Input
+                        label="Character Name"
+                        value={formData.nameEn}
+                        onChange={(e) => setFormData({ ...formData, nameEn: e.target.value })}
+                        placeholder="E.g. Cool Cat"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        label="Role"
+                        value={formData.roleEn}
+                        onChange={(e) => setFormData({ ...formData, roleEn: e.target.value })}
+                        placeholder="E.g. The Adventurer"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        label="Role Subtitle"
+                        value={formData.roleSubtitleEn}
+                        onChange={(e) => setFormData({ ...formData, roleSubtitleEn: e.target.value })}
+                        placeholder="E.g. Master Brewer"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-text-secondary mb-2">
+                        Short Description
+                      </label>
+                      <textarea
+                        value={formData.descriptionEn}
+                        onChange={(e) => setFormData({ ...formData, descriptionEn: e.target.value })}
+                        placeholder="Short character description..."
+                        rows={3}
+                        className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -326,20 +422,76 @@ const CharacterEditor: React.FC = () => {
         <TabsContent value="biography" className="space-y-6">
           <Card className="p-6 bg-[#2C2C2C] border-white/10">
             <CardHeader>
-              <CardTitle className="text-white">Biografía y Citas</CardTitle>
+              <div className="flex items-center gap-2">
+                <Languages className="w-5 h-5 text-brand-orange" />
+                <CardTitle className="text-white">Biografía y Citas / Biography & Quotes</CardTitle>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Biografía Completa
-                </label>
-                <textarea
-                  value={formData.biography}
-                  onChange={(e) => setFormData({ ...formData, biography: e.target.value })}
-                  placeholder="Biografía completa del personaje..."
-                  rows={8}
-                  className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
-                />
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Spanish Column */}
+                <div className="space-y-4 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg">🇪🇸</span>
+                    <span className="text-sm font-semibold text-white">Español</span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                      Biografía Completa
+                    </label>
+                    <textarea
+                      value={formData.biography}
+                      onChange={(e) => setFormData({ ...formData, biography: e.target.value })}
+                      placeholder="Biografía completa del personaje..."
+                      rows={8}
+                      className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                      Cita Característica
+                    </label>
+                    <textarea
+                      value={formData.signatureQuote}
+                      onChange={(e) => setFormData({ ...formData, signatureQuote: e.target.value })}
+                      placeholder="Frase característica del personaje..."
+                      rows={3}
+                      className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                    />
+                  </div>
+                </div>
+
+                {/* English Column */}
+                <div className="space-y-4 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-lg">🇬🇧</span>
+                    <span className="text-sm font-semibold text-white">English</span>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                      Full Biography
+                    </label>
+                    <textarea
+                      value={formData.biographyEn}
+                      onChange={(e) => setFormData({ ...formData, biographyEn: e.target.value })}
+                      placeholder="Full character biography..."
+                      rows={8}
+                      className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-text-secondary mb-2">
+                      Signature Quote
+                    </label>
+                    <textarea
+                      value={formData.signatureQuoteEn}
+                      onChange={(e) => setFormData({ ...formData, signatureQuoteEn: e.target.value })}
+                      placeholder="Character's signature quote..."
+                      rows={3}
+                      className="w-full px-4 py-2 rounded-lg bg-[#3A3A3A] border border-white/10 text-white placeholder:text-text-secondary focus:ring-2 focus:ring-[#ff6b35] focus:border-transparent resize-none"
+                    />
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

@@ -24,10 +24,12 @@ import {
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const SidebarLogoutButton = ({ onClose }: { onClose?: () => void }) => {
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { t } = useLanguage();
 
   const handleSignOut = async () => {
     try {
@@ -45,29 +47,29 @@ const SidebarLogoutButton = ({ onClose }: { onClose?: () => void }) => {
       className="flex w-full items-center px-3 py-2 text-sm font-medium text-text-secondary hover:text-red-400 transition-colors"
     >
       <LogOut className="mr-3 h-5 w-5" />
-      Cerrar Sesión
+      {t('sidebar.logout')}
     </button>
   );
 };
 
 
 const navItems = [
-  { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Notificaciones', path: '/admin/notifications', icon: Bell },
-  { name: 'CRM Clientes', path: '/admin/crm/customers', icon: Users },
-  { name: 'Registros Usuarios', path: '/admin/crm/user-records', icon: ClipboardList },
-  { name: 'Pedidos', path: '/admin/orders', icon: ShoppingCart },
-  { name: 'Productos', path: '/admin/products', icon: Package },
-  { name: 'Tiendas', path: '/admin/retail', icon: Store },
-  { name: 'Personajes', path: '/admin/characters', icon: Smile },
-  { name: 'Eventos', path: '/admin/events', icon: Calendar },
-  { name: 'Gamificación', path: '/admin/gamification', icon: Trophy },
-  { name: 'Productos Destacados', path: '/admin/marketing/featured', icon: Star },
-  { name: 'Banners App', path: '/admin/marketing/banners', icon: ImageIcon },
-  { name: 'Tabs de Navegación', path: '/admin/marketing/tabs', icon: Menu },
-  { name: 'Navegación App', path: '/admin/settings/navigation', icon: Menu },
-  { name: 'Mr. Cool Cat', path: '/admin/mrcoolcat', icon: Cat },
-  { name: 'Moderacion Muro', path: '/admin/moderation/community', icon: MessageSquareWarning },
+  { nameKey: 'sidebar.dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+  { nameKey: 'sidebar.notifications', path: '/admin/notifications', icon: Bell },
+  { nameKey: 'sidebar.crmCustomers', path: '/admin/crm/customers', icon: Users },
+  { nameKey: 'sidebar.userRecords', path: '/admin/crm/user-records', icon: ClipboardList },
+  { nameKey: 'sidebar.orders', path: '/admin/orders', icon: ShoppingCart },
+  { nameKey: 'sidebar.products', path: '/admin/products', icon: Package },
+  { nameKey: 'sidebar.stores', path: '/admin/retail', icon: Store },
+  { nameKey: 'sidebar.characters', path: '/admin/characters', icon: Smile },
+  { nameKey: 'sidebar.events', path: '/admin/events', icon: Calendar },
+  { nameKey: 'sidebar.gamification', path: '/admin/gamification', icon: Trophy },
+  { nameKey: 'sidebar.featuredProducts', path: '/admin/marketing/featured', icon: Star },
+  { nameKey: 'sidebar.appBanners', path: '/admin/marketing/banners', icon: ImageIcon },
+  { nameKey: 'sidebar.navTabs', path: '/admin/marketing/tabs', icon: Menu },
+  { nameKey: 'sidebar.appNavigation', path: '/admin/settings/navigation', icon: Menu },
+  { nameKey: 'sidebar.mrCoolCat', path: '/admin/mrcoolcat', icon: Cat },
+  { nameKey: 'sidebar.wallModeration', path: '/admin/moderation/community', icon: MessageSquareWarning },
 ];
 
 interface SidebarProps {
@@ -76,6 +78,8 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ className, onClose }) => {
+  const { t } = useLanguage();
+
   return (
     <div className={cn("flex flex-col bg-brand-surface text-text-primary h-full border-r border-white/10", className)}>
       {/* Header */}
@@ -88,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className, onClose }) => {
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
         {navItems.map((item) => (
           <NavLink
-            key={item.name}
+            key={item.nameKey}
             to={item.path}
             onClick={onClose}
             style={({ isActive }) => isActive ? { backgroundColor: '#F76934' } : undefined}
@@ -102,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className, onClose }) => {
             }
           >
             <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-            {item.name}
+            {t(item.nameKey)}
           </NavLink>
         ))}
       </nav>
