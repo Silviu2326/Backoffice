@@ -75,10 +75,18 @@ const EventCalendar = () => {
     return isoDate.split('T')[0];
   };
 
-  // Convert YYYY-MM-DD and time to ISO datetime
+  // Convert YYYY-MM-DD and time to ISO datetime with timezone offset
   const combineDateAndTime = (date: string, time: string): string => {
     if (!date || !time) return '';
-    return `${date}T${time}:00`;
+    // Create a Date object to get the correct timezone offset
+    const localDate = new Date(`${date}T${time}:00`);
+    // Get timezone offset in minutes and convert to hours:minutes format
+    const offset = -localDate.getTimezoneOffset();
+    const offsetHours = Math.floor(Math.abs(offset) / 60).toString().padStart(2, '0');
+    const offsetMinutes = (Math.abs(offset) % 60).toString().padStart(2, '0');
+    const offsetSign = offset >= 0 ? '+' : '-';
+    // Return ISO string with timezone offset (e.g., 2024-01-28T17:00:00+01:00)
+    return `${date}T${time}:00${offsetSign}${offsetHours}:${offsetMinutes}`;
   };
 
   const getDaysInMonth = (date: Date) => {

@@ -322,7 +322,7 @@ const StoreDetail = () => {
                   { value: 'pubs', label: 'Pubs' },
                   { value: 'cafes_bars', label: 'Cafes / Bars' },
                   { value: 'restaurants', label: 'Restaurants' },
-                  { value: 'supermercados', label: 'Supermercados' },
+                  { value: 'supermarkets', label: 'Supermarkets' },
                 ]}
                 placeholder="Seleccionar categoría"
               />
