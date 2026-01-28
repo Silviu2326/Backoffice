@@ -49,9 +49,13 @@ const CharacterEditor: React.FC = () => {
     primaryColor: '#ff6b35',
     secondaryColor: '#222222',
     personalityTags: [] as string[],
+    personalityTagsEn: [] as string[],
     traits: [] as string[],
+    traitsEn: [] as string[],
     interests: [] as string[],
+    interestsEn: [] as string[],
     likes: [] as string[],
+    likesEn: [] as string[],
     signatureBeer: '',
     signatureBeerStyle: '',
     cerveza: '',
@@ -62,9 +66,13 @@ const CharacterEditor: React.FC = () => {
   });
 
   const [newTag, setNewTag] = useState('');
+  const [newTagEn, setNewTagEn] = useState('');
   const [newTrait, setNewTrait] = useState('');
+  const [newTraitEn, setNewTraitEn] = useState('');
   const [newInterest, setNewInterest] = useState('');
+  const [newInterestEn, setNewInterestEn] = useState('');
   const [newLike, setNewLike] = useState('');
+  const [newLikeEn, setNewLikeEn] = useState('');
 
   // Cargar personaje desde Supabase
   useEffect(() => {
@@ -108,9 +116,13 @@ const CharacterEditor: React.FC = () => {
           primaryColor: fetchedCharacter.themeConfig?.primaryColor || '#ff6b35',
           secondaryColor: fetchedCharacter.themeConfig?.secondaryColor || '#222222',
           personalityTags: fetchedCharacter.personalityTags || [],
+          personalityTagsEn: (fetchedCharacter as any).personalityTagsEn || [],
           traits: fetchedCharacter.traits || [],
+          traitsEn: (fetchedCharacter as any).traitsEn || [],
           interests: fetchedCharacter.interests || [],
+          interestsEn: (fetchedCharacter as any).interestsEn || [],
           likes: fetchedCharacter.likes || [],
+          likesEn: (fetchedCharacter as any).likesEn || [],
           signatureBeer: fetchedCharacter.signatureBeer || '',
           signatureBeerStyle: fetchedCharacter.signatureBeerStyle || '',
           cerveza: fetchedCharacter.cerveza || '',
@@ -182,9 +194,13 @@ const CharacterEditor: React.FC = () => {
           secondaryColor: formData.secondaryColor,
         },
         personalityTags: formData.personalityTags.length > 0 ? formData.personalityTags : undefined,
+        personalityTagsEn: formData.personalityTagsEn.length > 0 ? formData.personalityTagsEn : undefined,
         traits: formData.traits.length > 0 ? formData.traits : undefined,
+        traitsEn: formData.traitsEn.length > 0 ? formData.traitsEn : undefined,
         interests: formData.interests.length > 0 ? formData.interests : undefined,
+        interestsEn: formData.interestsEn.length > 0 ? formData.interestsEn : undefined,
         likes: formData.likes.length > 0 ? formData.likes : undefined,
+        likesEn: formData.likesEn.length > 0 ? formData.likesEn : undefined,
         signatureBeer: formData.signatureBeer || undefined,
         signatureBeerStyle: formData.signatureBeerStyle || undefined,
         cerveza: formData.cerveza || undefined,
@@ -213,7 +229,7 @@ const CharacterEditor: React.FC = () => {
     }
   };
 
-  const addArrayItem = (field: 'personalityTags' | 'traits' | 'interests' | 'likes', value: string) => {
+  const addArrayItem = (field: 'personalityTags' | 'personalityTagsEn' | 'traits' | 'traitsEn' | 'interests' | 'interestsEn' | 'likes' | 'likesEn', value: string) => {
     if (value.trim()) {
       setFormData(prev => ({
         ...prev,
@@ -222,7 +238,7 @@ const CharacterEditor: React.FC = () => {
     }
   };
 
-  const removeArrayItem = (field: 'personalityTags' | 'traits' | 'interests' | 'likes', index: number) => {
+  const removeArrayItem = (field: 'personalityTags' | 'personalityTagsEn' | 'traits' | 'traitsEn' | 'interests' | 'interestsEn' | 'likes' | 'likesEn', index: number) => {
     setFormData(prev => ({
       ...prev,
       [field]: prev[field].filter((_, i) => i !== index),
@@ -501,96 +517,397 @@ const CharacterEditor: React.FC = () => {
         <TabsContent value="personality" className="space-y-6">
           <Card className="p-6 bg-[#2C2C2C] border-white/10">
             <CardHeader>
-              <CardTitle className="text-white">Personalidad</CardTitle>
+              <div className="flex items-center gap-2">
+                <Languages className="w-5 h-5 text-brand-orange" />
+                <CardTitle className="text-white">Personalidad / Personality</CardTitle>
+              </div>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Personality Tags */}
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Etiquetas de Personalidad
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    placeholder="Ej. Aventurero, Divertido, Cool"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addArrayItem('personalityTags', newTag);
-                        setNewTag('');
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={() => {
-                      addArrayItem('personalityTags', newTag);
-                      setNewTag('');
-                    }}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {formData.personalityTags.map((tag, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-[#ff6b35]/10 text-[#ff6b35]"
-                    >
-                      {tag}
-                      <button
-                        onClick={() => removeArrayItem('personalityTags', index)}
-                        className="hover:text-red-400"
+                <h3 className="text-md font-medium text-white mb-4">Etiquetas de Personalidad / Personality Tags</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Spanish */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇪🇸</span>
+                      <span className="text-sm font-semibold text-white">Español</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        placeholder="Ej. Aventurero, Divertido"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('personalityTags', newTag);
+                            setNewTag('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('personalityTags', newTag);
+                          setNewTag('');
+                        }}
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.personalityTags.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-[#ff6b35]/10 text-[#ff6b35]"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => removeArrayItem('personalityTags', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* English */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇬🇧</span>
+                      <span className="text-sm font-semibold text-white">English</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTagEn}
+                        onChange={(e) => setNewTagEn(e.target.value)}
+                        placeholder="E.g. Adventurous, Fun"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('personalityTagsEn', newTagEn);
+                            setNewTagEn('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('personalityTagsEn', newTagEn);
+                          setNewTagEn('');
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.personalityTagsEn.map((tag, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-[#ff6b35]/10 text-[#ff6b35]"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => removeArrayItem('personalityTagsEn', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Interests */}
               <div>
-                <label className="block text-sm font-medium text-text-secondary mb-2">
-                  Intereses
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <Input
-                    value={newInterest}
-                    onChange={(e) => setNewInterest(e.target.value)}
-                    placeholder="Ej. Cerveza, Música, Deportes"
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addArrayItem('interests', newInterest);
-                        setNewInterest('');
-                      }
-                    }}
-                  />
-                  <Button
-                    onClick={() => {
-                      addArrayItem('interests', newInterest);
-                      setNewInterest('');
-                    }}
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {formData.interests.map((interest, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-green-500/10 text-green-400"
-                    >
-                      {interest}
-                      <button
-                        onClick={() => removeArrayItem('interests', index)}
-                        className="hover:text-red-400"
+                <h3 className="text-md font-medium text-white mb-4">Intereses / Interests</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Spanish */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇪🇸</span>
+                      <span className="text-sm font-semibold text-white">Español</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newInterest}
+                        onChange={(e) => setNewInterest(e.target.value)}
+                        placeholder="Ej. Cerveza, Música"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('interests', newInterest);
+                            setNewInterest('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('interests', newInterest);
+                          setNewInterest('');
+                        }}
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.interests.map((interest, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-green-500/10 text-green-400"
+                        >
+                          {interest}
+                          <button
+                            onClick={() => removeArrayItem('interests', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* English */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇬🇧</span>
+                      <span className="text-sm font-semibold text-white">English</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newInterestEn}
+                        onChange={(e) => setNewInterestEn(e.target.value)}
+                        placeholder="E.g. Beer, Music"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('interestsEn', newInterestEn);
+                            setNewInterestEn('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('interestsEn', newInterestEn);
+                          setNewInterestEn('');
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.interestsEn.map((interest, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-green-500/10 text-green-400"
+                        >
+                          {interest}
+                          <button
+                            onClick={() => removeArrayItem('interestsEn', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Traits */}
+              <div>
+                <h3 className="text-md font-medium text-white mb-4">Rasgos / Traits</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Spanish */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇪🇸</span>
+                      <span className="text-sm font-semibold text-white">Español</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTrait}
+                        onChange={(e) => setNewTrait(e.target.value)}
+                        placeholder="Ej. Valiente, Leal"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('traits', newTrait);
+                            setNewTrait('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('traits', newTrait);
+                          setNewTrait('');
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.traits.map((trait, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-500/10 text-blue-400"
+                        >
+                          {trait}
+                          <button
+                            onClick={() => removeArrayItem('traits', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* English */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇬🇧</span>
+                      <span className="text-sm font-semibold text-white">English</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTraitEn}
+                        onChange={(e) => setNewTraitEn(e.target.value)}
+                        placeholder="E.g. Brave, Loyal"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('traitsEn', newTraitEn);
+                            setNewTraitEn('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('traitsEn', newTraitEn);
+                          setNewTraitEn('');
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.traitsEn.map((trait, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-blue-500/10 text-blue-400"
+                        >
+                          {trait}
+                          <button
+                            onClick={() => removeArrayItem('traitsEn', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Likes */}
+              <div>
+                <h3 className="text-md font-medium text-white mb-4">Gustos / Likes</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Spanish */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇪🇸</span>
+                      <span className="text-sm font-semibold text-white">Español</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newLike}
+                        onChange={(e) => setNewLike(e.target.value)}
+                        placeholder="Ej. Fiestas, Amigos"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('likes', newLike);
+                            setNewLike('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('likes', newLike);
+                          setNewLike('');
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.likes.map((like, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-purple-500/10 text-purple-400"
+                        >
+                          {like}
+                          <button
+                            onClick={() => removeArrayItem('likes', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {/* English */}
+                  <div className="space-y-3 p-4 rounded-lg bg-[#1A1A1A] border border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">🇬🇧</span>
+                      <span className="text-sm font-semibold text-white">English</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        value={newLikeEn}
+                        onChange={(e) => setNewLikeEn(e.target.value)}
+                        placeholder="E.g. Parties, Friends"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addArrayItem('likesEn', newLikeEn);
+                            setNewLikeEn('');
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => {
+                          addArrayItem('likesEn', newLikeEn);
+                          setNewLikeEn('');
+                        }}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.likesEn.map((like, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm bg-purple-500/10 text-purple-400"
+                        >
+                          {like}
+                          <button
+                            onClick={() => removeArrayItem('likesEn', index)}
+                            className="hover:text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardContent>
