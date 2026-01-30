@@ -608,14 +608,14 @@ export interface Character {
     primaryColor?: string;
     secondaryColor?: string;
   };
-  /** Personality tags */
+  /** Personality tags (Spanish) */
   personalityTags?: string[];
-  /** Personality traits */
-  traits?: string[];
-  /** Interests */
+  /** Personality tags (English) */
+  personalityTagsEn?: string[];
+  /** Interests (Spanish) */
   interests?: string[];
-  /** Likes */
-  likes?: string[];
+  /** Interests (English) */
+  interestsEn?: string[];
   /** Signature beer name */
   signatureBeer?: string;
   /** Signature beer style */

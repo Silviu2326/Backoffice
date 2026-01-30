@@ -6,8 +6,51 @@ import { useToast } from '../context/ToastContext';
 const Notifications: React.FC = () => {
     const [title, setTitle] = useState('');
     const [body, setBody] = useState('');
+    const [imageUrl, setImageUrl] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const { toast } = useToast();
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}.${fileExt}`;
+            const filePath = `push-images/${fileName}`;
+
+            // Asegúrate de crear el bucket 'notifications' en Supabase Storage (público)
+            const { error: uploadError } = await supabase.storage
+                .from('notifications')
+                .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data } = supabase.storage
+                .from('notifications')
+                .getPublicUrl(filePath);
+
+            setImageUrl(data.publicUrl);
+            toast({
+                title: 'Imagen subida',
+                description: 'La imagen se ha cargado correctamente',
+                variant: 'success'
+            });
+
+        } catch (error: any) {
+            console.error('Error uploading image:', error);
+            toast({
+                title: 'Error subiendo imagen',
+                description: 'Asegúrate de que el bucket "notifications" existe y es público. ' + error.message,
+                variant: 'error'
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    };
 
     const handleSendNotification = async () => {
         if (!title.trim() || !body.trim()) {
@@ -52,15 +95,24 @@ const Notifications: React.FC = () => {
             let successCount = 0;
 
             for (const chunk of chunks) {
-                const message = {
+                const message: any = {
                     to: chunk,
                     sound: 'default',
                     title: title,
                     body: body,
+                    priority: 'high', // Importante para que se muestren las imágenes expandidas
                     data: { someData: 'goes here' },
                 };
 
-                const response = await fetch('https://exp.host/--/api/v2/push/send', {
+                if (imageUrl.trim()) {
+                    message.image = imageUrl.trim();
+                    message.data.image = imageUrl.trim();
+                }
+
+                // Usamos el backend configurado en Railway
+                const BACKEND_URL = 'https://mrcoolcatbackend-production.up.railway.app/api/send-push-notification';
+
+                const response = await fetch(BACKEND_URL, {
                     method: 'POST',
                     headers: {
                         Accept: 'application/json',
@@ -84,6 +136,7 @@ const Notifications: React.FC = () => {
             });
             setTitle('');
             setBody('');
+            setImageUrl('');
 
         } catch (error: any) {
             console.error('Error sending notifications:', error);
@@ -137,6 +190,57 @@ const Notifications: React.FC = () => {
                             rows={4}
                             className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#F76934]"
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Imagen de la notificación
+                        </label>
+
+                        <div className="flex items-start gap-4">
+                            {imageUrl && (
+                                <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-white/10 bg-black/20">
+                                    <img
+                                        src={imageUrl}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover"
+                                    />
+                                    <button
+                                        onClick={() => setImageUrl('')}
+                                        className="absolute top-1 right-1 bg-black/60 rounded-full p-1 hover:bg-red-500/80 transition-colors"
+                                    >
+                                        <div className="w-4 h-4 text-white flex items-center justify-center font-bold">×</div>
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="flex-1">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageSelect}
+                                    accept="image/*"
+                                    className="hidden"
+                                />
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        disabled={isUploading}
+                                        className="flex items-center gap-2 px-4 py-2 bg-[#1A1A1A] border border-white/10 rounded-lg text-gray-300 hover:text-white hover:border-[#F76934] transition-all"
+                                    >
+                                        {isUploading ? (
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#F76934] border-t-transparent"></div>
+                                        ) : (
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" x2="12" y1="3" y2="15" /></svg>
+                                        )}
+                                        {isUploading ? 'Subiendo...' : 'Subir Imagen'}
+                                    </button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Se recomienda una imagen horizontal (ej. 2:1). Se subirá al bucket "notifications".
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="pt-4">

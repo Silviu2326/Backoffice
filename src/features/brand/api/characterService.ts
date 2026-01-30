@@ -30,12 +30,8 @@ export interface SupabaseCharacter {
   };
   personality_tags?: string[];
   personality_tags_en?: string[];
-  traits?: string[];
-  traits_en?: string[];
   interests?: string[];
   interests_en?: string[];
-  likes?: string[];
-  likes_en?: string[];
   signature_beer?: string;
   signature_beer_style?: string;
   cerveza?: string;
@@ -74,12 +70,8 @@ function mapSupabaseToCharacter(supabaseCharacter: SupabaseCharacter): Character
     themeConfig: supabaseCharacter.theme_config,
     personalityTags: supabaseCharacter.personality_tags || [],
     personalityTagsEn: supabaseCharacter.personality_tags_en || [],
-    traits: supabaseCharacter.traits || [],
-    traitsEn: supabaseCharacter.traits_en || [],
     interests: supabaseCharacter.interests || [],
     interestsEn: supabaseCharacter.interests_en || [],
-    likes: supabaseCharacter.likes || [],
-    likesEn: supabaseCharacter.likes_en || [],
     signatureBeer: supabaseCharacter.signature_beer,
     signatureBeerStyle: supabaseCharacter.signature_beer_style,
     cerveza: supabaseCharacter.cerveza,
@@ -120,13 +112,9 @@ function mapCharacterToSupabase(character: Partial<Character>): Partial<Supabase
     accent_color: character.accentColor || character.color,
     theme_config: character.themeConfig,
     personality_tags: character.personalityTags,
-    personality_tags_en: (character as any).personalityTagsEn,
-    traits: character.traits,
-    traits_en: (character as any).traitsEn,
+    personality_tags_en: character.personalityTagsEn,
     interests: character.interests,
-    interests_en: (character as any).interestsEn,
-    likes: character.likes,
-    likes_en: (character as any).likesEn,
+    interests_en: character.interestsEn,
     signature_beer: character.signatureBeer,
     signature_beer_style: character.signatureBeerStyle,
     cerveza: character.cerveza,
