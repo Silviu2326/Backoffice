@@ -95,19 +95,52 @@ const Notifications: React.FC = () => {
             let successCount = 0;
 
             for (const chunk of chunks) {
-                const message: any = {
-                    to: chunk,
-                    sound: 'default',
-                    title: title,
-                    body: body,
-                    priority: 'high', // Importante para que se muestren las imágenes expandidas
-                    data: { someData: 'goes here' },
-                };
+                // Crear array de mensajes para el batch
+                const messages = chunk.map((token: string) => {
+                    const message: any = {
+                        to: token,
+                        sound: 'default',
+                        title: title,
+                        body: body,
+                        priority: 'high',
+                        channelId: 'default',
+                    };
 
-                if (imageUrl.trim()) {
-                    message.image = imageUrl.trim();
-                    message.data.image = imageUrl.trim();
-                }
+                    if (imageUrl.trim()) {
+                        const cleanImageUrl = imageUrl.trim();
+
+                        // CRÍTICO: Incluir imagen en el campo data
+                        // Expo procesa las imágenes desde el campo data
+                        message.data = {
+                            image: cleanImageUrl,
+                        };
+
+                        // Para Android - usar el campo correcto según Expo
+                        message.android = {
+                            channelId: 'default',
+                            priority: 'high',
+                            sound: 'default',
+                            // FORMATO CORRECTO: usar "image" en lugar de "imageUrl"
+                            image: cleanImageUrl,
+                        };
+
+                        // Para iOS - requiere Notification Service Extension
+                        message.ios = {
+                            sound: 'default',
+                            _displayInForeground: true,
+                            attachments: [{
+                                url: cleanImageUrl,
+                            }],
+                        };
+                    } else {
+                        message.data = {};
+                    }
+
+                    return message;
+                });
+
+                // El payload es el array de mensajes
+                const payload = messages;
 
                 // Usamos el backend configurado en Railway
                 const BACKEND_URL = 'https://mrcoolcatbackend-production.up.railway.app/api/send-push-notification';
@@ -119,7 +152,7 @@ const Notifications: React.FC = () => {
                         'Accept-encoding': 'gzip, deflate',
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify(message),
+                    body: JSON.stringify(payload),
                 });
 
                 if (response.ok) {
