@@ -221,8 +221,14 @@ const Notifications: React.FC = () => {
                             onChange={(e) => setBody(e.target.value)}
                             placeholder="Escribe el contenido de la notificación..."
                             rows={4}
+                            maxLength={320}
                             className="w-full bg-[#1A1A1A] border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#F76934]"
                         />
+                        <div className="flex justify-end mt-1">
+                            <span className={`text-xs ${body.length >= 320 ? 'text-red-400' : 'text-gray-500'}`}>
+                                {body.length}/320 caracteres
+                            </span>
+                        </div>
                     </div>
 
                     <div>

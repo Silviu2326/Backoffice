@@ -28,6 +28,7 @@ import QuizManager from '../pages/gamification/QuizManager';
 import ServiceManager from '../pages/retail/ServiceManager';
 import NavigationManager from '../pages/settings/NavigationManager';
 import Notifications from '../pages/Notifications';
+import NotificationLogs from '../pages/NotificationLogs';
 import MrCoolCat from '../pages/mrcoolcat/MrCoolCat';
 
 export interface RouteConfig {
@@ -39,6 +40,7 @@ export interface RouteConfig {
 export const routes: RouteConfig[] = [
   { path: '/admin/dashboard', component: Dashboard, title: 'Dashboard' },
   { path: '/admin/notifications', component: Notifications, title: 'Notificaciones' },
+  { path: '/admin/notifications/logs', component: NotificationLogs, title: 'Logs de Notificaciones' },
   { path: '/admin/crm/customers', component: CustomerList, title: 'Clientes' },
   { path: '/admin/crm/customers/:id', component: CustomerDetail, title: 'Ficha de Cliente' },
   { path: '/admin/crm/user-records', component: UserRecords, title: 'Registros de Usuarios' },
