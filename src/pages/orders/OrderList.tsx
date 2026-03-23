@@ -1,17 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Eye, Plus, Loader2 } from 'lucide-react';
 import { Order, OrderStatus, Customer } from '../../types/core';
-import { getAllOrders, createOrder } from '../../features/orders/api/orderService';
+import { createOrder } from '../../features/orders/api/orderService';
+import { getStripeOrders } from '../../features/orders/api/stripeOrderService';
 import { getCustomers } from '../../features/crm/api/customerService';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../../components/ui/Tabs';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
@@ -26,7 +21,6 @@ const OrderList = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<OrderStatus>(OrderStatus.PENDING_PAYMENT);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('todos');
   const [page, setPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -43,12 +37,14 @@ const OrderList = () => {
 
   const loadOrders = async () => {
     try {
-      console.log('🚀 [OrderList] Iniciando carga de órdenes...');
+      console.log('🚀 [OrderList] Iniciando carga de órdenes desde Stripe...');
       setIsLoading(true);
-      const allOrders = await getAllOrders();
-      console.log('✅ [OrderList] Órdenes recibidas:', allOrders.length, allOrders);
-      setOrders(allOrders);
-      console.log('📊 [OrderList] Estado actualizado con órdenes:', allOrders);
+      const stripeOrders = await getStripeOrders();
+      // Filtrar solo órdenes pagadas
+      const paidOrders = stripeOrders.filter(order => order.stripePaymentStatus === 'paid');
+      console.log('✅ [OrderList] Órdenes de Stripe recibidas:', stripeOrders.length, '- Pagadas:', paidOrders.length);
+      setOrders(paidOrders);
+      console.log('📊 [OrderList] Estado actualizado con órdenes pagadas:', paidOrders);
     } catch (error) {
       console.error('❌ [OrderList] Error loading orders:', error);
     } finally {
@@ -131,100 +127,39 @@ const OrderList = () => {
     return customer ? customer.fullName : `Cliente ${customerId.substring(0, 8)}...`;
   };
 
-  const filteredOrders = useMemo(() => {
-    console.log('🔍 [OrderList] Filtrando órdenes...', { activeTab, totalOrders: orders.length });
-    console.log('📦 [OrderList] Órdenes originales:', orders);
-
-    let filtered = orders;
-
-    switch (activeTab) {
-      case 'pendientes':
-        filtered = orders.filter((order) => {
-          const matches = [OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, OrderStatus.PENDING].includes(order.status);
-          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches pendientes=${matches}`);
-          return matches;
-        });
-        break;
-      case 'proceso':
-        filtered = orders.filter((order) => {
-          const matches = [
-            OrderStatus.PREPARING,
-            OrderStatus.READY_TO_SHIP,
-            OrderStatus.SHIPPED,
-            OrderStatus.PROCESSING,
-          ].includes(order.status);
-          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches proceso=${matches}`);
-          return matches;
-        });
-        break;
-      case 'completados':
-        filtered = orders.filter((order) => {
-          const matches = order.status === OrderStatus.DELIVERED || order.status === OrderStatus.COMPLETED;
-          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches completados=${matches}`);
-          return matches;
-        });
-        break;
-      case 'incidencias':
-        filtered = orders.filter((order) => {
-          const matches = [OrderStatus.RETURNED, OrderStatus.CANCELLED, OrderStatus.CANCELLED_LOWERCASE, OrderStatus.FAILED].includes(order.status);
-          console.log(`  - Orden ${order.orderNumber}: status=${order.status}, matches incidencias=${matches}`);
-          return matches;
-        });
-        break;
-      default:
-        console.log('  - Tab "todos": mostrando todas las órdenes');
-        break;
-    }
-
-    console.log('✅ [OrderList] Órdenes filtradas:', filtered.length, filtered);
-
-    // Sort by date descending
-    const sorted = filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  // Ordenar por fecha descendente (ya están filtradas solo las pagadas)
+  const sortedOrders = useMemo(() => {
+    console.log('📦 [OrderList] Ordenando órdenes pagadas:', orders.length);
+    const sorted = [...orders].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     console.log('✅ [OrderList] Órdenes ordenadas:', sorted.length);
-
     return sorted;
-  }, [activeTab, orders]);
+  }, [orders]);
 
   const paginatedOrders = useMemo(() => {
     const start = (page - 1) * pageSize;
-    const paginated = filteredOrders.slice(start, start + pageSize);
-    console.log('📄 [OrderList] Órdenes paginadas:', { page, pageSize, start, total: filteredOrders.length, showing: paginated.length }, paginated);
+    const paginated = sortedOrders.slice(start, start + pageSize);
+    console.log('📄 [OrderList] Órdenes paginadas:', { page, pageSize, start, total: sortedOrders.length, showing: paginated.length });
     return paginated;
-  }, [filteredOrders, page]);
-
-  const getPaymentStatusBadge = (stripePaymentStatus?: string) => {
-    if (!stripePaymentStatus) {
-      return <Badge variant="warning">{t('paymentStatus.noPayment')}</Badge>;
-    }
-
-    switch (stripePaymentStatus) {
-      case 'succeeded':
-        return <Badge variant="success" dot>{t('paymentStatus.succeeded')}</Badge>;
-      case 'processing':
-        return <Badge variant="brand" dot>{t('paymentStatus.processing')}</Badge>;
-      case 'requires_payment_method':
-      case 'requires_confirmation':
-      case 'requires_action':
-        return <Badge variant="warning" dot>{t('paymentStatus.requiresAction')}</Badge>;
-      case 'canceled':
-        return <Badge variant="danger" dot>{t('paymentStatus.canceled')}</Badge>;
-      default:
-        return <Badge variant="default">{stripePaymentStatus}</Badge>;
-    }
-  };
+  }, [sortedOrders, page]);
 
   const columns: Column<Order>[] = [
     {
       header: t('orders.orderId'),
-      accessorKey: 'orderNumber',
-      className: 'font-medium text-white',
+      render: (order) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-white">{order.orderNumber}</span>
+          {order.orderNumber?.startsWith('STRIPE-') && (
+            <Badge variant="brand" className="text-xs">Stripe</Badge>
+          )}
+        </div>
+      ),
     },
     {
       header: t('orders.customer'),
       render: (order) => (
         <div className="flex flex-col">
           <span className="text-text-secondary">
-            {getCustomerName(order.customerId)}
+            {order.customerId ? getCustomerName(order.customerId) : 'Cliente de Stripe'}
           </span>
           {order.customerEmail && (
             <span className="text-xs text-text-muted">{order.customerEmail}</span>
@@ -248,14 +183,7 @@ const OrderList = () => {
         </span>
       ),
     },
-    {
-      header: t('orders.status'),
-      render: (order) => getStatusBadge(order.status),
-    },
-    {
-      header: t('orders.stripePayment'),
-      render: (order) => getPaymentStatusBadge(order.stripePaymentStatus),
-    },
+
     {
       header: t('orders.shippingMethod'),
       render: (order) => (
@@ -300,34 +228,24 @@ const OrderList = () => {
         </Button>
       </div>
 
-      <Tabs defaultValue="todos" onValueChange={(val) => { setActiveTab(val); setPage(1); }}>
-        <TabsList>
-          <TabsTrigger value="todos">{t('orders.all')}</TabsTrigger>
-          <TabsTrigger value="pendientes">{t('orders.pending')}</TabsTrigger>
-          <TabsTrigger value="proceso">{t('orders.inProgress')}</TabsTrigger>
-          <TabsTrigger value="completados">{t('orders.completed')}</TabsTrigger>
-          <TabsTrigger value="incidencias">{t('orders.incidents')}</TabsTrigger>
-        </TabsList>
-
-        <div className="mt-6">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
-            </div>
-          ) : (
-            <DataTable
-              data={paginatedOrders}
-              columns={columns}
-              pagination={{
-                page,
-                pageSize,
-                total: filteredOrders.length,
-                onPageChange: setPage,
-              }}
-            />
-          )}
-        </div>
-      </Tabs>
+      <div className="mt-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-brand-orange" />
+          </div>
+        ) : (
+          <DataTable
+            data={paginatedOrders}
+            columns={columns}
+            pagination={{
+              page,
+              pageSize,
+              total: orders.length,
+              onPageChange: setPage,
+            }}
+          />
+        )}
+      </div>
 
       <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
         <ModalHeader>{t('orders.createTitle')}</ModalHeader>
@@ -382,42 +300,39 @@ const OrderList = () => {
             </div>
           </ModalHeader>
           <ModalBody className="space-y-6 flex-1 overflow-y-auto pr-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 rounded-lg bg-white/5 p-4 border border-white/10">
-                <div>
+              {/* Información del Cliente - Solo Email visible */}
+              {selectedOrder.customerEmail && (
+                <div className="rounded-lg bg-white/5 p-4 border border-white/10">
                   <h4 className="mb-2 text-sm font-medium text-text-secondary">{t('orders.customer')}</h4>
-                  <p className="font-medium text-white">{getCustomerName(selectedOrder.customerId)}</p>
-                  <p className="text-sm text-text-secondary">ID: {selectedOrder.customerId}</p>
+                  <p className="text-sm text-white">{selectedOrder.customerEmail}</p>
                 </div>
-                <div>
-                  <h4 className="mb-2 text-sm font-medium text-text-secondary">{t('orders.shippingAddress')}</h4>
-                  <p className="text-sm text-white">
-                    {selectedOrder.shippingAddress.street}<br />
-                    {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zipCode}<br />
-                    {selectedOrder.shippingAddress.country}
-                  </p>
-                </div>
-                <div>
-                  <h4 className="mb-2 text-sm font-medium text-text-secondary">{t('orders.billingAddress')}</h4>
-                  <p className="text-sm text-white">
-                    {selectedOrder.billingAddress.street}<br />
-                    {selectedOrder.billingAddress.city}, {selectedOrder.billingAddress.state} {selectedOrder.billingAddress.zipCode}<br />
-                    {selectedOrder.billingAddress.country}
-                  </p>
-                </div>
-              </div>
+              )}
 
+              {/* Tabla de Items Pagados */}
               <div>
-                <h4 className="mb-4 font-medium text-white">{t('orders.orderItems')}</h4>
-                <OrderItemsTable
-                  items={selectedOrder.items}
-                  totals={{
-                    subtotal: selectedOrder.items.reduce((acc, item) => acc + item.totalPrice, 0),
-                    shipping: 0,
-                    tax: 0,
-                    discount: 0,
-                    total: selectedOrder.totalAmount
-                  }}
-                />
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-medium text-white">{t('orders.orderItems')}</h4>
+                  <Badge variant="success">
+                    {selectedOrder.items.length} {selectedOrder.items.length === 1 ? 'producto' : 'productos'} pagados
+                  </Badge>
+                </div>
+                
+                {selectedOrder.items.length > 0 ? (
+                  <OrderItemsTable
+                    items={selectedOrder.items}
+                    totals={{
+                      subtotal: selectedOrder.subtotal,
+                      shipping: selectedOrder.shippingCost,
+                      tax: 0,
+                      discount: selectedOrder.discount,
+                      total: selectedOrder.totalAmount
+                    }}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-text-secondary">
+                    <p>No hay items detallados para este pedido</p>
+                  </div>
+                )}
               </div>
             </ModalBody>
             <ModalFooter className="border-t border-white/10 pt-4">
