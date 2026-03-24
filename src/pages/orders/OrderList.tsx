@@ -1,8 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Eye, Plus, Loader2 } from 'lucide-react';
 import { Order, OrderStatus, Customer } from '../../types/core';
-import { createOrder } from '../../features/orders/api/orderService';
-import { getStripeOrders } from '../../features/orders/api/stripeOrderService';
+import { createOrder, getAllOrders } from '../../features/orders/api/orderService';
 import { getCustomers } from '../../features/crm/api/customerService';
 import { DataTable, Column } from '../../components/ui/DataTable';
 import { Badge } from '../../components/ui/Badge';
@@ -37,14 +36,11 @@ const OrderList = () => {
 
   const loadOrders = async () => {
     try {
-      console.log('🚀 [OrderList] Iniciando carga de órdenes desde Stripe...');
+      console.log('🚀 [OrderList] Iniciando carga de órdenes desde Supabase...');
       setIsLoading(true);
-      const stripeOrders = await getStripeOrders();
-      // Filtrar solo órdenes pagadas
-      const paidOrders = stripeOrders.filter(order => order.stripePaymentStatus === 'paid');
-      console.log('✅ [OrderList] Órdenes de Stripe recibidas:', stripeOrders.length, '- Pagadas:', paidOrders.length);
-      setOrders(paidOrders);
-      console.log('📊 [OrderList] Estado actualizado con órdenes pagadas:', paidOrders);
+      const supabaseOrders = await getAllOrders();
+      console.log('✅ [OrderList] Órdenes de Supabase recibidas:', supabaseOrders.length);
+      setOrders(supabaseOrders);
     } catch (error) {
       console.error('❌ [OrderList] Error loading orders:', error);
     } finally {
@@ -296,7 +292,7 @@ const OrderList = () => {
               {getStatusBadge(selectedOrder.status)}
             </div>
             <div className="text-sm font-normal text-text-secondary">
-              {formatDate(selectedOrder.createdAt, 'full')}
+              {formatDate(selectedOrder.createdAt, 'long')}
             </div>
           </ModalHeader>
           <ModalBody className="space-y-6 flex-1 overflow-y-auto pr-2">
@@ -305,6 +301,16 @@ const OrderList = () => {
                 <div className="rounded-lg bg-white/5 p-4 border border-white/10">
                   <h4 className="mb-2 text-sm font-medium text-text-secondary">{t('orders.customer')}</h4>
                   <p className="text-sm text-white">{selectedOrder.customerEmail}</p>
+                </div>
+              )}
+
+              {/* Dirección de Envío */}
+              {selectedOrder.rawShippingAddress && (
+                <div className="rounded-lg bg-white/5 p-4 border border-white/10">
+                  <h4 className="mb-2 text-sm font-medium text-text-secondary">Dirección de Envío</h4>
+                  <pre className="text-xs text-white/80 whitespace-pre-wrap">
+                    {JSON.stringify(selectedOrder.rawShippingAddress, null, 2)}
+                  </pre>
                 </div>
               )}
 
@@ -321,10 +327,10 @@ const OrderList = () => {
                   <OrderItemsTable
                     items={selectedOrder.items}
                     totals={{
-                      subtotal: selectedOrder.subtotal,
-                      shipping: selectedOrder.shippingCost,
+                      subtotal: selectedOrder.subtotal ?? 0,
+                      shipping: selectedOrder.shippingCost ?? 0,
                       tax: 0,
-                      discount: selectedOrder.discount,
+                      discount: selectedOrder.discount ?? 0,
                       total: selectedOrder.totalAmount
                     }}
                   />

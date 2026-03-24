@@ -56,19 +56,35 @@ function mapSupabaseToOrder(supabaseOrder: SupabaseOrder, items: OrderItem[]): O
     shipping_address_type: typeof supabaseOrder.shipping_address
   });
 
-  // Parsear shipping_address si es string JSON
   let shippingAddr: any = {};
   if (typeof supabaseOrder.shipping_address === 'string') {
     try {
       shippingAddr = JSON.parse(supabaseOrder.shipping_address);
-      console.log('✅ [mapSupabaseToOrder] Shipping address parseado:', shippingAddr);
     } catch (e) {
-      console.error('❌ [mapSupabaseToOrder] Error parseando shipping_address:', e);
       shippingAddr = {};
     }
   } else if (supabaseOrder.shipping_address) {
     shippingAddr = supabaseOrder.shipping_address;
-    console.log('✅ [mapSupabaseToOrder] Shipping address (objeto):', shippingAddr);
+  }
+
+  let orderItems = items;
+  if (orderItems.length === 0 && supabaseOrder.cart) {
+    try {
+      const cartData = typeof supabaseOrder.cart === 'string' 
+        ? JSON.parse(supabaseOrder.cart) 
+        : supabaseOrder.cart;
+      orderItems = cartData.map((cartItem: any) => ({
+        productId: cartItem.productId || cartItem.id,
+        variantId: cartItem.variant?.id,
+        name: cartItem.name,
+        sku: cartItem.variant?.sku || cartItem.id,
+        quantity: cartItem.quantity,
+        unitPrice: cartItem.price,
+        totalPrice: cartItem.itemTotal,
+      }));
+    } catch (e) {
+      console.error('Error parsing cart:', e);
+    }
   }
 
   const mappedOrder = {
@@ -81,7 +97,7 @@ function mapSupabaseToOrder(supabaseOrder: SupabaseOrder, items: OrderItem[]): O
     shippingCost: supabaseOrder.shipping_cost || 0,
     discount: supabaseOrder.discount || 0,
     status: supabaseOrder.status as OrderStatus,
-    items: items,
+    items: orderItems,
     shippingAddress: {
       street: shippingAddr.street || shippingAddr.address || '',
       city: shippingAddr.city || '',
@@ -89,6 +105,7 @@ function mapSupabaseToOrder(supabaseOrder: SupabaseOrder, items: OrderItem[]): O
       zipCode: shippingAddr.zip_code || shippingAddr.zipCode || '',
       country: shippingAddr.country || '',
     },
+    rawShippingAddress: shippingAddr,
     billingAddress: {
       street: shippingAddr.street || shippingAddr.address || '',
       city: shippingAddr.city || '',

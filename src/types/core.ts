@@ -336,6 +336,8 @@ export interface Order {
   items: OrderItem[];
   /** Shipping destination */
   shippingAddress: Address;
+  /** Raw shipping address from source (Supabase JSONB) */
+  rawShippingAddress?: Record<string, unknown>;
   /** Billing address */
   billingAddress: Address;
   /** Stripe Payment Intent ID */
